@@ -1,0 +1,1361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CNN — Live Forward Pass</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+:root {
+  --bg: #0b0f1a;
+  --bg2: #111827;
+  --bg3: #1a2235;
+  --line: #1e293b;
+  --muted: #475569;
+  --text: #e2e8f0;
+  --dim: #94a3b8;
+  --blue: #3b82f6;
+  --blue2: #60a5fa;
+  --cyan: #06b6d4;
+  --green: #22c55e;
+  --orange: #f97316;
+  --purple: #a855f7;
+  --pink: #ec4899;
+  --yellow: #eab308;
+  --red: #ef4444;
+  --glow-blue: 0 0 20px rgba(59,130,246,0.5);
+  --glow-green: 0 0 20px rgba(34,197,94,0.5);
+  --glow-orange: 0 0 20px rgba(249,115,22,0.5);
+  --glow-purple: 0 0 20px rgba(168,85,247,0.5);
+  --glow-cyan: 0 0 20px rgba(6,182,212,0.5);
+}
+
+* { box-sizing:border-box; margin:0; padding:0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── HEADER ── */
+header {
+  text-align: center;
+  padding: 32px 20px 16px;
+  position: relative;
+}
+header::after {
+  content: '';
+  display: block;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--blue), var(--cyan), var(--blue), transparent);
+  margin-top: 18px;
+  opacity: 0.5;
+}
+.title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(28px,5vw,52px);
+  letter-spacing: 4px;
+  background: linear-gradient(135deg, var(--blue), var(--cyan), var(--purple));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.subtitle {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--dim);
+  margin-top: 6px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+
+
+/* ── MAIN PIPELINE ── */
+.pipeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 10px 24px 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* ── STAGE ── */
+.stage {
+  display: grid;
+  grid-template-columns: 140px 1fr 260px;
+  gap: 0 16px;
+  align-items: center;
+  padding: 10px 0;
+  opacity: 0.35;
+  transition: opacity 0.4s;
+  position: relative;
+}
+.stage.active { opacity: 1; }
+.stage.done { opacity: 0.75; }
+
+.stage-label {
+  text-align: right;
+  padding-right: 14px;
+}
+.stage-num {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 28px;
+  line-height: 1;
+  color: var(--muted);
+  transition: color 0.3s;
+}
+.stage.active .stage-num { color: var(--cyan); text-shadow: 0 0 12px var(--cyan); }
+.stage.done .stage-num { color: var(--green); }
+.stage-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.stage.active .stage-name { color: var(--blue2); }
+
+.stage-content {
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px 16px;
+  transition: border-color 0.3s, box-shadow 0.3s;
+  min-height: 88px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  position: relative;
+  overflow: hidden;
+}
+.stage.active .stage-content {
+  border-color: rgba(59,130,246,0.4);
+  box-shadow: 0 0 24px rgba(59,130,246,0.12);
+}
+.stage.done .stage-content { border-color: rgba(34,197,94,0.25); }
+
+/* scan line animation when active */
+.stage.active .stage-content::before {
+  content: '';
+  position: absolute;
+  top: -100%;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--blue), var(--cyan), transparent);
+  animation: scanline 1.8s linear infinite;
+}
+@keyframes scanline { to { top: 200%; } }
+
+.stage-note {
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--dim);
+  font-family: 'DM Sans', sans-serif;
+}
+.stage-note b { color: var(--text); }
+.stage-note .eq {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--cyan);
+  background: rgba(6,182,212,0.08);
+  border: 1px solid rgba(6,182,212,0.2);
+  padding: 2px 8px;
+  border-radius: 3px;
+  display: inline-block;
+  margin-top: 4px;
+}
+
+/* connector lines between stages */
+.connector {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+  grid-column: 1/-1;
+  position: relative;
+}
+.connector-line {
+  width: 2px;
+  height: 100%;
+  background: var(--line);
+  margin-left: 106px;
+  position: relative;
+  overflow: hidden;
+}
+.connector-pulse {
+  position: absolute;
+  top: -20px;
+  left: -3px;
+  width: 8px;
+  height: 20px;
+  background: linear-gradient(to bottom, transparent, var(--blue), var(--cyan));
+  border-radius: 4px;
+  opacity: 0;
+}
+.connector-pulse.flowing {
+  animation: flowdown 0.6s ease-in forwards;
+}
+@keyframes flowdown {
+  0% { top: -20px; opacity: 1; }
+  100% { top: 100%; opacity: 0; }
+}
+
+/* ── VISUALIZATIONS ── */
+
+/* INPUT IMAGE */
+.pixel-canvas {
+  display: grid;
+  gap: 1.5px;
+  flex-shrink: 0;
+}
+.px {
+  border-radius: 1px;
+  transition: background 0.3s;
+}
+
+/* TOKEN CHIPS */
+.token-list { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
+.token {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  padding: 3px 9px;
+  border-radius: 4px;
+  border: 1px solid;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.3s, transform 0.3s;
+}
+.token.show { opacity: 1; transform: translateY(0); }
+
+/* CONV FILTER GRID */
+.filter-wrap { display: flex; gap: 8px; align-items: center; }
+.filter-grid {
+  display: grid;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.fc {
+  border-radius: 2px;
+  transition: background 0.3s, transform 0.2s;
+}
+.filter-op { font-size: 20px; color: var(--muted); }
+.feature-maps { display: flex; gap: 4px; align-items: flex-end; }
+.fmap { display: flex; flex-direction: column; gap: 1.5px; opacity: 0; transition: opacity 0.5s; }
+.fmap.show { opacity: 1; }
+.fr { display: flex; gap: 1.5px; }
+.fm { border-radius: 1px; transition: background 0.4s; }
+
+/* RELU GRAPH */
+.relu-svg { overflow: visible; }
+
+/* POOLING */
+.pool-wrap { display: flex; gap: 10px; align-items: center; }
+.pool-grid { display: grid; gap: 2px; }
+.pool-cell {
+  width: 20px; height: 20px;
+  border-radius: 2px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px;
+  color: white;
+  font-weight: 600;
+  transition: all 0.3s;
+}
+.pool-cell.highlighted { transform: scale(1.15); box-shadow: 0 0 8px currentColor; }
+
+/* FLATTEN */
+.flatten-viz { display: flex; gap: 2px; align-items: flex-end; }
+.fv-bar {
+  width: 6px;
+  border-radius: 1px 1px 0 0;
+  transition: height 0.5s, background 0.3s;
+  min-height: 2px;
+}
+
+/* FC neurons */
+.neurons-wrap { display: flex; gap: 6px; align-items: center; }
+.neuron-col { display: flex; flex-direction: column; gap: 5px; align-items: center; }
+.neuron-node {
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  border: 1.5px solid;
+  transition: all 0.3s;
+  position: relative;
+}
+.neuron-node.lit { box-shadow: 0 0 10px currentColor; }
+.neuron-label { font-family: 'JetBrains Mono', monospace; font-size: 8px; color: var(--muted); margin-top: 2px; }
+.nc-line { font-size: 11px; color: var(--muted); }
+
+/* OUTPUT BARS */
+.output-wrap { display: flex; gap: 5px; align-items: flex-end; height: 72px; }
+.out-bar-wrap { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.out-bar {
+  width: 28px;
+  border-radius: 3px 3px 0 0;
+  transition: height 0.7s cubic-bezier(0.34,1.56,0.64,1), background 0.3s;
+  position: relative;
+}
+.out-bar-label { font-family: 'JetBrains Mono', monospace; font-size: 8px; color: var(--muted); text-align: center; }
+.out-bar-val { font-family: 'JetBrains Mono', monospace; font-size: 8px; color: var(--cyan); }
+.winner { box-shadow: var(--glow-green); }
+
+/* DATA PACKET animation */
+.packet {
+  position: fixed;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--cyan);
+  box-shadow: 0 0 14px var(--cyan);
+  pointer-events: none;
+  z-index: 1000;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+/* PROGRESS BAR */
+.progress-wrap {
+  padding: 0 24px 12px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+.progress-track {
+  height: 3px;
+  background: var(--line);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--blue), var(--cyan));
+  border-radius: 2px;
+  width: 0%;
+  transition: width 0.4s ease;
+  box-shadow: 0 0 8px var(--cyan);
+}
+
+/* TOOLTIP */
+.info-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  padding: 2px 7px;
+  border-radius: 10px;
+  display: inline-block;
+  margin: 2px;
+}
+
+/* Done check */
+.done-check {
+  position: absolute;
+  top: 8px; right: 10px;
+  font-size: 16px;
+  opacity: 0;
+  transition: opacity 0.5s;
+}
+.stage.done .done-check { opacity: 1; }
+
+/* RESULT BOX */
+.result-box {
+  margin: 0 24px 30px;
+  max-width: 1152px;
+  margin-left: auto;
+  margin-right: auto;
+  border: 1px solid rgba(34,197,94,0.3);
+  background: rgba(34,197,94,0.05);
+  border-radius: 8px;
+  padding: 16px 20px;
+  display: none;
+  animation: fadeIn 0.5s ease;
+}
+.result-box.show { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+@keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+.result-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px;
+  letter-spacing: 2px;
+  color: var(--green);
+  text-shadow: var(--glow-green);
+}
+.result-pred {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: var(--text);
+}
+.result-conf {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--cyan);
+  background: rgba(6,182,212,0.1);
+  border: 1px solid rgba(6,182,212,0.3);
+  padding: 4px 12px;
+  border-radius: 4px;
+}
+
+/* blinking cursor */
+.cursor { display: inline-block; animation: blink 1s step-end infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+
+/* ── FLOATING DOCK (sticky bottom) ── */
+.dock {
+  position: fixed;
+  bottom: 22px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  background: rgba(10,15,30,0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(59,130,246,0.35);
+  border-radius: 50px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.04);
+  white-space: nowrap;
+}
+
+.dock-btn {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.8px;
+  padding: 7px 16px;
+  border-radius: 30px;
+  border: 1px solid;
+  cursor: pointer;
+  transition: all 0.18s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-transform: uppercase;
+  user-select: none;
+}
+.dock-btn:active { transform: scale(0.95); }
+
+.dock-btn-next {
+  background: var(--blue);
+  border-color: var(--blue2);
+  color: #fff;
+  font-weight: 600;
+}
+.dock-btn-next:hover { background: var(--blue2); box-shadow: 0 0 18px rgba(59,130,246,0.5); }
+.dock-btn-next:disabled { background: #1e293b; border-color: #334155; color: #475569; cursor: not-allowed; }
+
+.dock-btn-auto {
+  background: transparent;
+  border-color: var(--purple);
+  color: var(--purple);
+}
+.dock-btn-auto:hover { background: rgba(168,85,247,0.12); box-shadow: 0 0 14px rgba(168,85,247,0.35); }
+
+.dock-btn-reset {
+  background: transparent;
+  border-color: #334155;
+  color: var(--muted);
+}
+.dock-btn-reset:hover { border-color: var(--cyan); color: var(--cyan); }
+
+.dock-sep {
+  width: 1px;
+  height: 22px;
+  background: #1e293b;
+  flex-shrink: 0;
+}
+
+.dock-stage-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--cyan);
+  background: rgba(6,182,212,0.1);
+  border: 1px solid rgba(6,182,212,0.25);
+  padding: 5px 12px;
+  border-radius: 20px;
+  min-width: 148px;
+  text-align: center;
+}
+
+.dock-speed {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+}
+.dock-speed input[type=range] {
+  width: 64px;
+  accent-color: var(--cyan);
+  cursor: pointer;
+}
+
+.dock-kbd {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: #334155;
+  border: 1px solid #1e293b;
+  border-radius: 4px;
+  padding: 1px 5px;
+  background: rgba(255,255,255,0.03);
+}
+
+/* ── progress bar always visible at very top ── */
+.progress-wrap {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  padding: 0;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+}
+
+/* bottom padding so last stage isn't hidden behind dock */
+.pipeline { padding-bottom: 100px !important; }
+.result-box { margin-bottom: 100px !important; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="title">CNN — Live Forward Pass</div>
+  <div class="subtitle">Convolutional Neural Network · Interactive Animation · Image Classification</div>
+</header>
+
+<div class="progress-wrap">
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+</div>
+
+<div class="pipeline" id="pipeline">
+
+  <!-- STAGE 1: INPUT -->
+  <div class="stage" id="stage-0">
+    <div class="stage-label">
+      <div class="stage-num">01</div>
+      <div class="stage-name">Input</div>
+    </div>
+    <div class="stage-content">
+      <div id="inputViz">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:6px;">32 × 32 × 3 RGB tensor</div>
+        <canvas id="inputCanvas" width="80" height="80" style="border-radius:3px;border:1px solid var(--line);"></canvas>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <div style="display:flex;gap:6px;">
+          <span class="info-badge" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#f87171;">R channel</span>
+          <span class="info-badge" style="background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.3);color:#4ade80;">G channel</span>
+          <span class="info-badge" style="background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.3);color:#60a5fa;">B channel</span>
+        </div>
+        <div id="pixelVals" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">pixel values: 0–255</div>
+      </div>
+      <div class="stage-note">
+        <b>Raw pixel data</b><br>
+        Each pixel = 3 values (RGB)<br>
+        Total: 32×32×3 = <b>3,072</b> values<br>
+        <span class="eq">H × W × C</span>
+      </div>
+      <div class="done-check">✅</div>
+    </div>
+    <div class="stage-note" style="padding:4px 0;">
+      <b style="color:var(--dim);">Normalize</b><br>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">÷255 → [0,1]<br>or mean/std</span>
+    </div>
+  </div>
+  <div class="connector"><div class="connector-line"><div class="connector-pulse" id="cp0"></div></div></div>
+
+  <!-- STAGE 2: CONV LAYER 1 -->
+  <div class="stage" id="stage-1">
+    <div class="stage-label">
+      <div class="stage-num">02</div>
+      <div class="stage-name">Conv 1</div>
+    </div>
+    <div class="stage-content">
+      <div id="convViz1" style="display:flex;gap:10px;align-items:center;">
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:4px;">Filter #1 (3×3)</div>
+          <div id="filterGrid1" style="display:grid;grid-template-columns:repeat(3,18px);gap:2px;"></div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--muted);margin-top:3px;text-align:center;">×32 filters</div>
+        </div>
+        <div id="convSlide" style="font-size:22px;color:var(--muted);">⊛</div>
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:4px;">Feature Maps (30×30×32)</div>
+          <div id="featureMaps1" style="display:flex;gap:3px;align-items:flex-end;"></div>
+        </div>
+      </div>
+      <div class="stage-note">
+        <b>Learned filters</b> slide over input<br>
+        Each filter detects: edges, curves<br>
+        Stride=1, No padding<br>
+        <span class="eq">output = Σ(filter ⊛ patch) + b</span>
+      </div>
+      <div class="done-check">✅</div>
+    </div>
+    <div class="stage-note" style="padding:4px 0;">
+      <b style="color:var(--dim);">Params</b><br>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">32×(3×3×3+1)<br>= 896 params</span>
+    </div>
+  </div>
+  <div class="connector"><div class="connector-line"><div class="connector-pulse" id="cp1"></div></div></div>
+
+  <!-- STAGE 3: RELU -->
+  <div class="stage" id="stage-2">
+    <div class="stage-label">
+      <div class="stage-num">03</div>
+      <div class="stage-name">ReLU</div>
+    </div>
+    <div class="stage-content">
+      <div id="reluViz" style="display:flex;gap:14px;align-items:center;">
+        <svg id="reluSvg" width="110" height="72" class="relu-svg">
+          <!-- axes -->
+          <line x1="8" y1="62" x2="102" y2="62" stroke="#334155" stroke-width="1.5"/>
+          <line x1="55" y1="8" x2="55" y2="66" stroke="#334155" stroke-width="1.5"/>
+          <!-- zero line fill -->
+          <polyline id="reluLine" points="8,62 55,62 102,14" fill="none" stroke="#475569" stroke-width="2.5" stroke-linecap="round"/>
+          <!-- animated fill -->
+          <polyline id="reluLineAnim" points="8,62 55,62 102,14" fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="140" stroke-dashoffset="140"/>
+          <text x="72" y="22" font-size="9" fill="#22c55e" font-family="JetBrains Mono">ReLU</text>
+          <text x="5" y="68" font-size="8" fill="#475569" font-family="JetBrains Mono">-x</text>
+          <text x="90" y="68" font-size="8" fill="#475569" font-family="JetBrains Mono">+x</text>
+          <text x="57" y="16" font-size="8" fill="#475569" font-family="JetBrains Mono">y</text>
+        </svg>
+        <div id="reluNegKill" style="display:flex;flex-direction:column;gap:4px;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:2px;">Before → After ReLU:</div>
+        </div>
+      </div>
+      <div class="stage-note">
+        <b>f(x) = max(0, x)</b><br>
+        Kills negative values → 0<br>
+        Adds <b>non-linearity</b><br>
+        <span class="eq">Without: just linear math!</span>
+      </div>
+      <div class="done-check">✅</div>
+    </div>
+    <div class="stage-note" style="padding:4px 0;">
+      <b style="color:var(--dim);">Why ReLU?</b><br>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">No vanishing<br>gradient, fast</span>
+    </div>
+  </div>
+  <div class="connector"><div class="connector-line"><div class="connector-pulse" id="cp2"></div></div></div>
+
+  <!-- STAGE 4: MAX POOLING -->
+  <div class="stage" id="stage-3">
+    <div class="stage-label">
+      <div class="stage-num">04</div>
+      <div class="stage-name">Max Pool</div>
+    </div>
+    <div class="stage-content">
+      <div id="poolViz" style="display:flex;gap:10px;align-items:center;">
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:4px;">Input 4×4</div>
+          <div id="poolInput" style="display:grid;grid-template-columns:repeat(4,22px);gap:2px;"></div>
+        </div>
+        <div style="font-size:20px;color:var(--muted);" id="poolArrow">→</div>
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:4px;">Output 2×2</div>
+          <div id="poolOutput" style="display:grid;grid-template-columns:repeat(2,30px);gap:2px;"></div>
+        </div>
+      </div>
+      <div class="stage-note">
+        <b>2×2 window, stride 2</b><br>
+        Takes MAX from each region<br>
+        Halves spatial dimensions<br>
+        <span class="eq">translation invariant!</span>
+      </div>
+      <div class="done-check">✅</div>
+    </div>
+    <div class="stage-note" style="padding:4px 0;">
+      <b style="color:var(--dim);">Result</b><br>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">30×30 → 15×15<br>per feature map</span>
+    </div>
+  </div>
+  <div class="connector"><div class="connector-line"><div class="connector-pulse" id="cp3"></div></div></div>
+
+  <!-- STAGE 5: CONV BLOCK 2 -->
+  <div class="stage" id="stage-4">
+    <div class="stage-label">
+      <div class="stage-num">05</div>
+      <div class="stage-name">Conv Block 2</div>
+    </div>
+    <div class="stage-content">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <div id="block2flow" style="display:flex;gap:6px;align-items:center;">
+          <div class="block2-chip" style="border:1px solid rgba(59,130,246,0.4);background:rgba(59,130,246,0.08);border-radius:4px;padding:5px 10px;font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--blue2);opacity:0;">Conv2D<br>64 filters</div>
+          <span style="color:var(--muted);font-size:12px;" class="block2-chip" style="opacity:0;">→</span>
+          <div class="block2-chip" style="border:1px solid rgba(34,197,94,0.4);background:rgba(34,197,94,0.08);border-radius:4px;padding:5px 10px;font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--green);opacity:0;">ReLU</div>
+          <span style="color:var(--muted);font-size:12px;" class="block2-chip" style="opacity:0;">→</span>
+          <div class="block2-chip" style="border:1px solid rgba(168,85,247,0.4);background:rgba(168,85,247,0.08);border-radius:4px;padding:5px 10px;font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--purple);opacity:0;">MaxPool<br>7×7×64</div>
+          <span style="color:var(--muted);font-size:12px;" class="block2-chip" style="opacity:0;">→</span>
+          <div class="block2-chip" style="border:1px solid rgba(249,115,22,0.4);background:rgba(249,115,22,0.08);border-radius:4px;padding:5px 10px;font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--orange);opacity:0;">Conv2D<br>128 filters</div>
+          <span style="color:var(--muted);font-size:12px;" class="block2-chip" style="opacity:0;">→</span>
+          <div class="block2-chip" style="border:1px solid rgba(34,197,94,0.4);background:rgba(34,197,94,0.08);border-radius:4px;padding:5px 10px;font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--green);opacity:0;">ReLU</div>
+          <span style="color:var(--muted);font-size:12px;" class="block2-chip" style="opacity:0;">→</span>
+          <div class="block2-chip" style="border:1px solid rgba(6,182,212,0.4);background:rgba(6,182,212,0.08);border-radius:4px;padding:5px 10px;font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--cyan);opacity:0;">MaxPool<br>3×3×128</div>
+        </div>
+      </div>
+      <div class="stage-note">
+        <b>Deeper = more abstract</b><br>
+        Early: edges &amp; corners<br>
+        Mid: textures &amp; shapes<br>
+        <span class="eq">Deep: eyes, whiskers, ears</span>
+      </div>
+      <div class="done-check">✅</div>
+    </div>
+    <div class="stage-note" style="padding:4px 0;">
+      <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">Receptive field<br>grows each layer</span>
+    </div>
+  </div>
+  <div class="connector"><div class="connector-line"><div class="connector-pulse" id="cp4"></div></div></div>
+
+  <!-- STAGE 6: FLATTEN -->
+  <div class="stage" id="stage-5">
+    <div class="stage-label">
+      <div class="stage-num">06</div>
+      <div class="stage-name">Flatten</div>
+    </div>
+    <div class="stage-content">
+      <div id="flattenViz" style="display:flex;gap:10px;align-items:center;">
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:4px;">3D tensor (3×3×128)</div>
+          <div style="display:grid;grid-template-columns:repeat(3,10px);gap:2px;" id="flattenCube"></div>
+        </div>
+        <div style="font-size:22px;color:var(--cyan);" id="flattenArrow">→</div>
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:4px;">1D vector (1152-dim)</div>
+          <div id="flattenBars" style="display:flex;gap:1.5px;align-items:flex-end;height:40px;"></div>
+        </div>
+      </div>
+      <div class="stage-note">
+        <b>3D → 1D reshape</b><br>
+        H × W × C → (H·W·C)<br>
+        Bridge to dense layers<br>
+        <span class="eq">No learned params here</span>
+      </div>
+      <div class="done-check">✅</div>
+    </div>
+    <div class="stage-note" style="padding:4px 0;">
+      <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">Loses spatial<br>structure → OK,<br>pooling preserved it</span>
+    </div>
+  </div>
+  <div class="connector"><div class="connector-line"><div class="connector-pulse" id="cp5"></div></div></div>
+
+  <!-- STAGE 7: FULLY CONNECTED -->
+  <div class="stage" id="stage-6">
+    <div class="stage-label">
+      <div class="stage-num">07</div>
+      <div class="stage-name">FC Layers</div>
+    </div>
+    <div class="stage-content">
+      <div id="fcViz" style="display:flex;gap:6px;align-items:center;">
+        <!-- input nodes -->
+        <div style="display:flex;flex-direction:column;gap:4px;align-items:center;">
+          <div id="fc-in" style="display:flex;flex-direction:column;gap:4px;"></div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--muted);margin-top:3px;">1152</div>
+        </div>
+        <svg id="fcLines1" width="40" height="80" style="overflow:visible;"></svg>
+        <div style="display:flex;flex-direction:column;gap:4px;align-items:center;">
+          <div id="fc-h1" style="display:flex;flex-direction:column;gap:4px;"></div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--muted);margin-top:3px;">512</div>
+        </div>
+        <svg id="fcLines2" width="36" height="60" style="overflow:visible;"></svg>
+        <div style="display:flex;flex-direction:column;gap:4px;align-items:center;">
+          <div id="fc-h2" style="display:flex;flex-direction:column;gap:4px;"></div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--muted);margin-top:3px;">128</div>
+        </div>
+      </div>
+      <div class="stage-note">
+        <b>Dense connections</b><br>
+        Every → every neuron<br>
+        W: weight matrix<br>
+        <span class="eq">output = ReLU(Wx + b)</span>
+      </div>
+      <div class="done-check">✅</div>
+    </div>
+    <div class="stage-note" style="padding:4px 0;">
+      <b style="color:var(--dim);">Dropout</b><br>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">p=0.5 during<br>training only</span>
+    </div>
+  </div>
+  <div class="connector"><div class="connector-line"><div class="connector-pulse" id="cp6"></div></div></div>
+
+  <!-- STAGE 8: SOFTMAX OUTPUT -->
+  <div class="stage" id="stage-7">
+    <div class="stage-label">
+      <div class="stage-num">08</div>
+      <div class="stage-name">Softmax</div>
+    </div>
+    <div class="stage-content">
+      <div id="outputViz">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:6px;">Class probabilities:</div>
+        <div id="outputBars" style="display:flex;gap:5px;align-items:flex-end;height:72px;"></div>
+      </div>
+      <div class="stage-note">
+        <b>e^logit / Σe^logits</b><br>
+        Sums to 1.0 always<br>
+        argmax → prediction<br>
+        <span class="eq">Temperature T controls sharpness</span>
+      </div>
+      <div class="done-check">✅</div>
+    </div>
+    <div class="stage-note" style="padding:4px 0;">
+      <b style="color:var(--dim);">Loss</b><br>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">CrossEntropy<br>-log(p_correct)</span>
+    </div>
+  </div>
+
+</div><!-- end pipeline -->
+
+<div class="result-box" id="resultBox">
+  <div class="result-title">🎯 Prediction</div>
+  <div class="result-pred" id="resultPred">—</div>
+  <div class="result-conf" id="resultConf">—</div>
+  <div style="flex:1"></div>
+  <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);">
+    Forward pass complete.<br>
+    Loss &amp; backprop would follow in training.
+  </div>
+</div>
+
+<!-- ── FLOATING DOCK ── -->
+<div class="dock" id="floatingDock">
+  <button class="dock-btn dock-btn-next" id="btnRun">▶&nbsp;Next Step</button>
+  <span class="dock-kbd">Space</span>
+
+  <div class="dock-sep"></div>
+
+  <button class="dock-btn dock-btn-auto" id="btnAuto">⚡ Auto</button>
+
+  <div class="dock-sep"></div>
+
+  <div class="dock-stage-badge" id="stepIndicator">Ready to start<span class="cursor">_</span></div>
+
+  <div class="dock-sep"></div>
+
+  <div class="dock-speed">
+    <span>Speed</span>
+    <input type="range" id="speedSlider" min="0.5" max="3" step="0.5" value="1">
+    <span id="speedLabel">1×</span>
+  </div>
+
+  <div class="dock-sep"></div>
+
+  <button class="dock-btn dock-btn-reset" id="btnReset">↺</button>
+</div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────────
+let currentStage = -1;
+let isRunning = false;
+let autoRunTimer = null;
+let speed = 1;
+
+const STAGES = [
+  { name:'Input Image loaded',       color:'var(--blue)' },
+  { name:'Conv Layer 1 applied',     color:'var(--cyan)' },
+  { name:'ReLU activation applied',  color:'var(--green)' },
+  { name:'Max Pooling complete',      color:'var(--purple)' },
+  { name:'Deep Conv blocks done',    color:'var(--orange)' },
+  { name:'Tensor flattened',         color:'var(--cyan)' },
+  { name:'FC layers computed',       color:'var(--pink)' },
+  { name:'Softmax — Prediction!',    color:'var(--green)' },
+];
+
+const CLASSES = ['🐱 Cat','🐶 Dog','🐦 Bird','🐟 Fish','🐰 Rabbit','🚗 Car'];
+const PROBS   = [0.72, 0.12, 0.07, 0.04, 0.03, 0.02];
+
+// ─── SPEED ───────────────────────────────────────────────────
+document.getElementById('speedSlider').addEventListener('input', e => {
+  speed = parseFloat(e.target.value);
+  document.getElementById('speedLabel').textContent = speed + '×';
+});
+function delay(ms) { return new Promise(r => setTimeout(r, ms / speed)); }
+
+// ─── INPUT CANVAS ────────────────────────────────────────────
+function drawInputImage() {
+  const canvas = document.getElementById('inputCanvas');
+  const ctx = canvas.getContext('2d');
+  // draw a cute 32×32 cat-ish face
+  const g = ctx.createRadialGradient(40,40,4,40,40,38);
+  g.addColorStop(0,'#fbbf24');
+  g.addColorStop(0.7,'#f59e0b');
+  g.addColorStop(1,'#78350f');
+  ctx.fillStyle = '#0b0f1a';
+  ctx.fillRect(0,0,80,80);
+  // body
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(40,44,28,0,Math.PI*2); ctx.fill();
+  // ears
+  ctx.fillStyle = '#f59e0b';
+  ctx.beginPath(); ctx.moveTo(18,22); ctx.lineTo(10,6); ctx.lineTo(30,16); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(62,22); ctx.lineTo(70,6); ctx.lineTo(50,16); ctx.fill();
+  ctx.fillStyle = '#fda4af'; // inner ear
+  ctx.beginPath(); ctx.moveTo(20,20); ctx.lineTo(13,9); ctx.lineTo(27,17); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(60,20); ctx.lineTo(67,9); ctx.lineTo(53,17); ctx.fill();
+  // eyes
+  ctx.fillStyle = '#1e293b';
+  ctx.beginPath(); ctx.arc(30,38,5,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(50,38,5,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#22c55e';
+  ctx.beginPath(); ctx.arc(30,38,3,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(50,38,3,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#000';
+  ctx.beginPath(); ctx.arc(30,38,1.5,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(50,38,1.5,0,Math.PI*2); ctx.fill();
+  // nose
+  ctx.fillStyle = '#fda4af';
+  ctx.beginPath(); ctx.arc(40,47,3,0,Math.PI*2); ctx.fill();
+  // whiskers
+  ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 0.8;
+  [[15,45,32,47],[10,50,32,49],[15,55,32,51]].forEach(([x1,y1,x2,y2]) => {
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(80-x1,y1); ctx.lineTo(80-x2,y2); ctx.stroke();
+  });
+}
+
+// ─── INIT UI ─────────────────────────────────────────────────
+function initUI() {
+  drawInputImage();
+
+  // Filter grid
+  const fg = document.getElementById('filterGrid1');
+  const filterVals = [[-1,0,1],[-2,0,2],[-1,0,1]];
+  fg.innerHTML='';
+  filterVals.flat().forEach(v=>{
+    const d = document.createElement('div');
+    const intensity = (v+2)/4;
+    d.style.cssText=`width:18px;height:18px;border-radius:2px;background:rgba(59,130,246,${0.15+intensity*0.7});border:1px solid rgba(59,130,246,0.3);`;
+    fg.appendChild(d);
+  });
+
+  // Feature maps placeholder
+  const fm = document.getElementById('featureMaps1');
+  fm.innerHTML='';
+  const colors = ['#3b82f6','#06b6d4','#22c55e','#a855f7','#f97316'];
+  colors.forEach((c,i)=>{
+    const wrap = document.createElement('div');
+    wrap.style.cssText='display:flex;flex-direction:column;gap:1.5px;opacity:0;transition:opacity 0.4s;';
+    wrap.id=`fmap${i}`;
+    for(let r=0;r<4;r++){
+      const row = document.createElement('div');
+      row.style.cssText='display:flex;gap:1.5px;';
+      for(let c2=0;c2<4;c2++){
+        const cell = document.createElement('div');
+        const op = Math.random()*0.6+0.2;
+        cell.style.cssText=`width:9px;height:9px;border-radius:1px;background:${c};opacity:${op};`;
+        row.appendChild(cell);
+      }
+      wrap.appendChild(row);
+    }
+    fm.appendChild(wrap);
+  });
+  const more = document.createElement('div');
+  more.style.cssText='font-family:"JetBrains Mono",monospace;font-size:9px;color:var(--muted);align-self:center;';
+  more.textContent='...×32';
+  fm.appendChild(more);
+
+  // Pool input grid
+  const poolData = [[1,3,2,4],[2,1,1,3],[5,2,6,1],[1,3,2,4]];
+  const poolColors = [['rgba(59,130,246,0.25)','rgba(59,130,246,0.6)','rgba(168,85,247,0.25)','rgba(168,85,247,0.6)'],
+                      ['rgba(59,130,246,0.1)','rgba(59,130,246,0.2)','rgba(168,85,247,0.1)','rgba(168,85,247,0.2)'],
+                      ['rgba(249,115,22,0.5)','rgba(249,115,22,0.25)','rgba(236,72,153,0.6)','rgba(236,72,153,0.1)'],
+                      ['rgba(249,115,22,0.15)','rgba(249,115,22,0.4)','rgba(236,72,153,0.15)','rgba(236,72,153,0.4)']];
+  const pi = document.getElementById('poolInput');
+  pi.innerHTML='';
+  poolData.forEach((row,ri)=>row.forEach((v,ci)=>{
+    const d = document.createElement('div');
+    d.id=`pcell-${ri}-${ci}`;
+    d.style.cssText=`width:22px;height:22px;border-radius:2px;background:${poolColors[ri][ci]};border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--text);transition:all 0.3s;`;
+    d.textContent=v;
+    pi.appendChild(d);
+  }));
+
+  const po = document.getElementById('poolOutput');
+  po.innerHTML='';
+  [[3,'rgba(59,130,246,0.7)'],[4,'rgba(168,85,247,0.7)'],[5,'rgba(249,115,22,0.7)'],[6,'rgba(236,72,153,0.7)']].forEach(([v,c])=>{
+    const d = document.createElement('div');
+    d.style.cssText=`width:30px;height:30px;border-radius:3px;background:${c};border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:white;opacity:0;transition:all 0.5s;box-shadow:0 0 12px ${c};`;
+    d.textContent=v;
+    po.appendChild(d);
+  });
+
+  // Flatten cube
+  const fc2 = document.getElementById('flattenCube');
+  fc2.innerHTML='';
+  const cubeColors = ['#3b82f6','#06b6d4','#22c55e','#a855f7','#f97316','#ec4899','#eab308','#6366f1','#14b8a6'];
+  cubeColors.forEach(c=>{
+    const d = document.createElement('div');
+    d.style.cssText=`width:10px;height:10px;border-radius:1px;background:${c};opacity:0.7;`;
+    fc2.appendChild(d);
+  });
+
+  // Flatten bars
+  const fb = document.getElementById('flattenBars');
+  fb.innerHTML='';
+  for(let i=0;i<32;i++){
+    const d = document.createElement('div');
+    d.style.cssText=`width:5px;height:2px;border-radius:1px 1px 0 0;background:var(--blue);transition:height 0.4s cubic-bezier(0.34,1.56,0.64,1);`;
+    d.id=`fbar${i}`;
+    fb.appendChild(d);
+  }
+
+  // FC neurons
+  buildNeurons('fc-in', 6, '#3b82f6');
+  buildNeurons('fc-h1', 5, '#a855f7');
+  buildNeurons('fc-h2', 4, '#ec4899');
+  buildFCLines();
+
+  // Output bars
+  buildOutputBars();
+
+  // ReLU values
+  const rv = document.getElementById('reluNegKill');
+  rv.innerHTML='<div style="font-family:\'JetBrains Mono\',monospace;font-size:9px;color:var(--muted);margin-bottom:2px;">Before → After ReLU:</div>';
+  [[-2.1,0],[-0.4,0],[1.8,1.8],[3.2,3.2],[-0.8,0],[0.5,0.5]].forEach(([b,a])=>{
+    const row = document.createElement('div');
+    row.style.cssText='display:flex;gap:6px;align-items:center;font-family:"JetBrains Mono",monospace;font-size:9px;';
+    const before = document.createElement('span');
+    before.style.color = b<0 ? '#ef4444':'#94a3b8';
+    before.textContent = b.toFixed(1);
+    const arrow = document.createElement('span');
+    arrow.style.color='#475569';
+    arrow.textContent='→';
+    const after = document.createElement('span');
+    after.style.color = a>0 ? '#22c55e':'#475569';
+    after.textContent = a.toFixed(1);
+    row.append(before,arrow,after);
+    rv.appendChild(row);
+  });
+}
+
+function buildNeurons(containerId, count, color) {
+  const c = document.getElementById(containerId);
+  c.innerHTML='';
+  for(let i=0;i<count;i++){
+    const d = document.createElement('div');
+    d.style.cssText=`width:14px;height:14px;border-radius:50%;border:1.5px solid ${color};background:transparent;transition:all 0.3s;`;
+    d.id=`${containerId}-n${i}`;
+    c.appendChild(d);
+  }
+}
+
+function buildFCLines() {
+  const s1 = document.getElementById('fcLines1');
+  s1.innerHTML='';
+  for(let i=0;i<6;i++) for(let j=0;j<5;j++){
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1','0'); line.setAttribute('y1', 7+i*13);
+    line.setAttribute('x2','40'); line.setAttribute('y2', 7+j*15);
+    line.setAttribute('stroke','rgba(59,130,246,0.15)'); line.setAttribute('stroke-width','0.8');
+    s1.appendChild(line);
+  }
+  const s2 = document.getElementById('fcLines2');
+  s2.innerHTML='';
+  for(let i=0;i<5;i++) for(let j=0;j<4;j++){
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1','0'); line.setAttribute('y1', 7+i*15);
+    line.setAttribute('x2','36'); line.setAttribute('y2', 7+j*18);
+    line.setAttribute('stroke','rgba(168,85,247,0.15)'); line.setAttribute('stroke-width','0.8');
+    s2.appendChild(line);
+  }
+}
+
+function buildOutputBars() {
+  const ob = document.getElementById('outputBars');
+  ob.innerHTML='';
+  CLASSES.forEach((cls,i)=>{
+    const wrap = document.createElement('div');
+    wrap.style.cssText='display:flex;flex-direction:column;align-items:center;gap:3px;';
+    const bar = document.createElement('div');
+    bar.id=`obar${i}`;
+    bar.style.cssText=`width:30px;height:2px;border-radius:3px 3px 0 0;background:var(--blue);transition:height 0.7s cubic-bezier(0.34,1.56,0.64,1);`;
+    const lbl = document.createElement('div');
+    lbl.style.cssText='font-family:"JetBrains Mono",monospace;font-size:8px;color:var(--muted);text-align:center;max-width:36px;';
+    lbl.textContent = cls.split(' ')[1];
+    const val = document.createElement('div');
+    val.id=`oval${i}`;
+    val.style.cssText='font-family:"JetBrains Mono",monospace;font-size:8px;color:var(--cyan);';
+    val.textContent='';
+    wrap.append(val,bar,lbl);
+    ob.appendChild(wrap);
+  });
+}
+
+// ─── STAGE RUNNERS ───────────────────────────────────────────
+async function runStage(idx) {
+  const stage = document.getElementById(`stage-${idx}`);
+  stage.classList.add('active');
+  document.getElementById('stepIndicator').innerHTML =
+    `<span style="color:var(--cyan);">Stage ${idx+1}/8</span> — ${STAGES[idx].name}<span class="cursor">_</span>`;
+  document.getElementById('progressFill').style.width = `${((idx+1)/8)*100}%`;
+
+  if(idx===0) await stageInput();
+  else if(idx===1) await stageConv();
+  else if(idx===2) await stageRelu();
+  else if(idx===3) await stagePool();
+  else if(idx===4) await stageDeepBlocks();
+  else if(idx===5) await stageFlatten();
+  else if(idx===6) await stageFC();
+  else if(idx===7) await stageSoftmax();
+
+  stage.classList.remove('active');
+  stage.classList.add('done');
+
+  // pulse connector
+  const cp = document.getElementById(`cp${idx}`);
+  if(cp){ cp.classList.add('flowing'); setTimeout(()=>cp.classList.remove('flowing'),700); }
+}
+
+async function stageInput() {
+  document.getElementById('pixelVals').innerHTML =
+    'R=<span style="color:#f87171">215</span> G=<span style="color:#4ade80">178</span> B=<span style="color:#60a5fa">42</span> (sample pixel)';
+  await delay(600);
+}
+
+async function stageConv() {
+  // animate filter sliding
+  const convSlide = document.getElementById('convSlide');
+  const original = convSlide.style.color;
+  for(let i=0;i<4;i++){
+    convSlide.style.color = i%2===0 ? 'var(--cyan)':'var(--muted)';
+    convSlide.style.textShadow = i%2===0 ? '0 0 12px var(--cyan)':'none';
+    await delay(200);
+  }
+  convSlide.style.color='var(--cyan)';
+  convSlide.style.textShadow='0 0 12px var(--cyan)';
+  // reveal feature maps
+  for(let i=0;i<5;i++){
+    document.getElementById(`fmap${i}`).style.opacity='1';
+    await delay(120);
+  }
+  await delay(300);
+}
+
+async function stageRelu() {
+  // animate relu line drawing
+  const line = document.getElementById('reluLineAnim');
+  line.style.transition='stroke-dashoffset 0.7s ease';
+  line.style.strokeDashoffset='0';
+  // animate neg→0 values
+  const rows = document.getElementById('reluNegKill').querySelectorAll('div:not(:first-child)');
+  for(const r of rows){
+    r.style.background='rgba(34,197,94,0.05)';
+    r.style.borderRadius='3px';
+    r.style.padding='1px 4px';
+    await delay(100);
+  }
+  await delay(400);
+}
+
+async function stagePool() {
+  // highlight 2x2 regions sequentially
+  const quadrants = [[0,0,1,1],[0,2,1,3],[2,0,3,1],[2,2,3,3]];
+  const outputs = document.getElementById('poolOutput').children;
+  for(let q=0;q<4;q++){
+    const [r1,c1,r2,c2] = quadrants[q];
+    [[r1,c1],[r1,c2],[r2,c1],[r2,c2]].forEach(([r,c])=>{
+      const cell = document.getElementById(`pcell-${r}-${c}`);
+      if(cell){ cell.style.transform='scale(1.1)'; cell.style.boxShadow='0 0 10px currentColor'; }
+    });
+    await delay(300);
+    [[r1,c1],[r1,c2],[r2,c1],[r2,c2]].forEach(([r,c])=>{
+      const cell = document.getElementById(`pcell-${r}-${c}`);
+      if(cell){ cell.style.transform=''; cell.style.boxShadow=''; }
+    });
+    outputs[q].style.opacity='1';
+    outputs[q].style.transform='scale(1.08)';
+    await delay(150);
+    outputs[q].style.transform='scale(1)';
+  }
+  await delay(200);
+}
+
+async function stageDeepBlocks() {
+  const chips = document.querySelectorAll('.block2-chip');
+  for(const chip of chips){
+    chip.style.opacity='1';
+    chip.style.transform='translateY(0)';
+    chip.style.transition='opacity 0.3s, transform 0.3s';
+    await delay(130);
+  }
+  await delay(300);
+}
+
+async function stageFlatten() {
+  const arrow = document.getElementById('flattenArrow');
+  arrow.style.color='var(--cyan)';
+  arrow.style.textShadow='0 0 12px var(--cyan)';
+  await delay(300);
+  const bars = document.querySelectorAll('[id^="fbar"]');
+  for(let i=0;i<bars.length;i++){
+    const h = 8 + Math.random()*30;
+    const colors=['#3b82f6','#06b6d4','#22c55e','#a855f7','#f97316','#ec4899'];
+    bars[i].style.height=h+'px';
+    bars[i].style.background=colors[i%colors.length];
+    if(i%4===0) await delay(40);
+  }
+  await delay(300);
+}
+
+async function stageFC() {
+  // light up neurons in waves
+  const layers = [
+    {id:'fc-in', color:'rgba(59,130,246,0.6)', count:6},
+    {id:'fc-h1', color:'rgba(168,85,247,0.6)', count:5},
+    {id:'fc-h2', color:'rgba(236,72,153,0.6)', count:4},
+  ];
+  // update SVG lines
+  const s1 = document.getElementById('fcLines1');
+  s1.querySelectorAll('line').forEach(l=>l.setAttribute('stroke','rgba(59,130,246,0.3)'));
+  const s2 = document.getElementById('fcLines2');
+  s2.querySelectorAll('line').forEach(l=>l.setAttribute('stroke','rgba(168,85,247,0.3)'));
+
+  for(const layer of layers){
+    const nodes = document.querySelectorAll(`#${layer.id} > div`);
+    for(const n of nodes){
+      n.style.background=layer.color;
+      n.style.boxShadow=`0 0 10px ${layer.color}`;
+      await delay(60);
+    }
+    await delay(200);
+  }
+  await delay(300);
+}
+
+async function stageSoftmax() {
+  const colors=['#22c55e','#3b82f6','#06b6d4','#a855f7','#f97316','#ec4899'];
+  for(let i=0;i<CLASSES.length;i++){
+    const bar = document.getElementById(`obar${i}`);
+    const val = document.getElementById(`oval${i}`);
+    const h = PROBS[i]*64;
+    bar.style.height=h+'px';
+    bar.style.background=colors[i];
+    val.textContent=(PROBS[i]*100).toFixed(0)+'%';
+    if(i===0){
+      bar.style.boxShadow=`0 0 16px ${colors[0]}`;
+      val.style.color=colors[0];
+    }
+    await delay(100);
+  }
+  await delay(400);
+  showResult();
+}
+
+function showResult() {
+  const rb = document.getElementById('resultBox');
+  rb.classList.add('show');
+  document.getElementById('resultPred').textContent = '→ ' + CLASSES[0];
+  document.getElementById('resultConf').textContent = 'Confidence: 72.0%  |  Top-1 class: Cat';
+  document.getElementById('stepIndicator').innerHTML =
+    '<span style="color:var(--green);">✅ Forward Pass Complete!</span>';
+}
+
+// ─── AUTO-SCROLL to active stage ─────────────────────────────
+function scrollToStage(idx) {
+  const el = document.getElementById(`stage-${idx}`);
+  if (!el) return;
+  const dockH = 90; // space reserved for floating dock
+  const rect = el.getBoundingClientRect();
+  const scrollTop = window.pageYOffset + rect.top - window.innerHeight / 2 + rect.height / 2;
+  window.scrollTo({ top: Math.max(0, scrollTop), behavior: 'smooth' });
+}
+
+// ─── BUTTON STATE ─────────────────────────────────────────────
+function syncBtn() {
+  const btn = document.getElementById('btnRun');
+  if (currentStage >= 7) {
+    btn.textContent = '↺ Restart';
+    btn.disabled = false;
+  } else {
+    btn.innerHTML = '▶&nbsp;Next Step';
+    btn.disabled = isRunning;
+  }
+}
+
+// ─── CONTROLS ────────────────────────────────────────────────
+document.getElementById('btnRun').addEventListener('click', () => {
+  if (currentStage >= 7) { resetAll(); return; }
+  if (isRunning) return;
+  isRunning = true;
+  syncBtn();
+  currentStage++;
+  scrollToStage(currentStage);
+  runStage(currentStage).then(() => { isRunning = false; syncBtn(); });
+});
+
+document.getElementById('btnAuto').addEventListener('click', async () => {
+  if (isRunning) return;
+  if (currentStage >= 7) { resetAll(); await delay(300); }
+  isRunning = true;
+  syncBtn();
+  while (currentStage < 7) {
+    currentStage++;
+    scrollToStage(currentStage);
+    await runStage(currentStage);
+    await delay(350);
+  }
+  isRunning = false;
+  syncBtn();
+});
+
+document.getElementById('btnReset').addEventListener('click', resetAll);
+
+// ─── KEYBOARD SHORTCUT ────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.code === 'Space' || e.code === 'ArrowRight' || e.code === 'KeyN') {
+    e.preventDefault();
+    document.getElementById('btnRun').click();
+  }
+  if (e.code === 'KeyR') { e.preventDefault(); resetAll(); }
+  if (e.code === 'KeyA') { e.preventDefault(); document.getElementById('btnAuto').click(); }
+});
+
+function resetAll(){
+  isRunning=false;
+  currentStage=-1;
+  syncBtn();
+  document.querySelectorAll('.stage').forEach(s=>{ s.classList.remove('active','done'); });
+  document.getElementById('progressFill').style.width='0%';
+  document.getElementById('stepIndicator').innerHTML='Ready to start<span class="cursor">_</span>';
+  document.getElementById('resultBox').classList.remove('show');
+
+  // reset feature maps
+  for(let i=0;i<5;i++){
+    const fm=document.getElementById(`fmap${i}`);
+    if(fm) fm.style.opacity='0';
+  }
+  // reset relu line
+  const line=document.getElementById('reluLineAnim');
+  if(line){ line.style.transition='none'; line.style.strokeDashoffset='140'; }
+  // reset pool
+  document.querySelectorAll('#poolOutput > div').forEach(d=>d.style.opacity='0');
+  // reset block2 chips
+  document.querySelectorAll('.block2-chip').forEach(c=>c.style.opacity='0');
+  // reset flatten bars
+  document.querySelectorAll('[id^="fbar"]').forEach(b=>{ b.style.height='2px'; });
+  // reset FC neurons
+  document.querySelectorAll('#fc-in > div,#fc-h1 > div,#fc-h2 > div').forEach(n=>{
+    n.style.background='transparent'; n.style.boxShadow='none';
+  });
+  document.getElementById('fcLines1').querySelectorAll('line').forEach(l=>l.setAttribute('stroke','rgba(59,130,246,0.15)'));
+  document.getElementById('fcLines2').querySelectorAll('line').forEach(l=>l.setAttribute('stroke','rgba(168,85,247,0.15)'));
+  // reset output bars
+  for(let i=0;i<6;i++){
+    const b=document.getElementById(`obar${i}`);
+    if(b){ b.style.height='2px'; b.style.boxShadow='none'; }
+    const v=document.getElementById(`oval${i}`);
+    if(v) v.textContent='';
+  }
+  document.getElementById('pixelVals').textContent='pixel values: 0–255';
+}
+
+// ─── INIT ─────────────────────────────────────────────────────
+initUI();
+syncBtn();
+</script>
+</body>
+</html>
