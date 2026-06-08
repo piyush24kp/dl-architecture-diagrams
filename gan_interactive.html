@@ -17,8 +17,8 @@ header::after{content:'';display:block;height:1px;background:linear-gradient(90d
 .progress-track{height:3px;background:var(--line);}
 .progress-fill{height:100%;background:linear-gradient(90deg,var(--red),var(--orange),var(--green));width:0%;transition:width 0.4s;box-shadow:0 0 8px var(--red);}
 .pipeline{display:flex;flex-direction:column;padding:12px 24px 100px;max-width:1150px;margin:0 auto;}
-.stage{display:grid;grid-template-columns:130px 1fr 250px;gap:0 16px;align-items:center;padding:8px 0;opacity:0.3;transition:opacity 0.4s;position:relative;}
-.stage.active{opacity:1;}.stage.done{opacity:0.7;}
+.stage{display:grid;grid-template-columns:130px 1fr 250px;gap:0 16px;align-items:center;padding:8px 0;transition:opacity 0.4s;position:relative;}
+.stage.active{opacity:1;}.stage.done{opacity:0.75;}
 .stage-label{text-align:right;padding-right:14px;}
 .stage-num{font-family:'Bebas Neue',sans-serif;font-size:28px;line-height:1;color:var(--muted);transition:color 0.3s;}
 .stage.active .stage-num{color:var(--red);text-shadow:0 0 12px var(--red);}.stage.done .stage-num{color:var(--green);}
@@ -67,7 +67,7 @@ header::after{content:'';display:block;height:1px;background:linear-gradient(90d
   <div class="subtitle">Adversarial Training · Forger vs Detective · Image Synthesis</div>
 </header>
 <div class="progress-wrap"><div class="progress-track"><div class="progress-fill" id="pf"></div></div></div>
-<div class="pipeline">
+<div class="pipeline" id="pipeline">
 
 <!-- S1 Noise -->
 <div class="stage" id="stage-0">
@@ -227,7 +227,7 @@ let currentStage=-1,isRunning=false,speed=1;
 const TOTAL=8;
 document.getElementById('speedSlider').addEventListener('input',e=>{speed=parseFloat(e.target.value);document.getElementById('speedLabel').textContent=speed+'×';});
 function delay(ms){return new Promise(r=>setTimeout(r,ms/speed));}
-function scrollToStage(idx){const el=document.getElementById(`stage-${idx}`);if(!el)return;const top=window.pageYOffset+el.getBoundingClientRect().top-window.innerHeight/2+el.offsetHeight/2;window.scrollTo({top:Math.max(0,top),behavior:'smooth'});}
+function scrollToStage(idx){const el=document.getElementById('stage-'+idx);if(!el)return;window.scrollTo({top:Math.max(0,window.pageYOffset+el.getBoundingClientRect().top-window.innerHeight/2+el.offsetHeight/2),behavior:'smooth'});}
 function syncBtn(){const b=document.getElementById('btnRun');if(currentStage>=TOTAL-1){b.textContent='↺ Restart';b.disabled=false;}else{b.innerHTML='▶ Next Step';b.disabled=isRunning;}}
 function setIndicator(html){document.getElementById('stepIndicator').innerHTML=html+'<span class="cursor">_</span>';}
 function fillProgress(){document.getElementById('pf').style.width=`${((currentStage+1)/TOTAL)*100}%`;}
@@ -240,10 +240,16 @@ if(quality>0.5){c.fillStyle=`rgba(30,41,59,${alpha})`;c.beginPath();c.arc(w/3,h*
 if(quality>0.7){c.beginPath();c.arc(w/2,h*0.62,w/8,0,Math.PI);c.strokeStyle=`rgba(30,41,59,${alpha})`;c.lineWidth=2;c.stroke();}}
 
 async function runStage(idx){
-  const el=document.getElementById(`stage-${idx}`);el.classList.add('active');
-  setIndicator(`<span style="color:var(--red);">Stage ${idx+1}/${TOTAL}</span>`);fillProgress();
+  // Own opacity directly — no CSS specificity fights
+  document.querySelectorAll('.stage').forEach((s,i)=>{
+    if(i===idx) s.style.opacity='1';
+    else if(s.classList.contains('done')) s.style.opacity='0.75';
+    else s.style.opacity='0.4';
+  });
+  const el=document.getElementById('stage-'+idx);el.classList.add('active');
+  setIndicator('<span style="color:var(--red);">Stage '+(idx+1)+'/8</span>');fillProgress();
   if(idx===0)await s0();else if(idx===1)await s1();else if(idx===2)await s2();else if(idx===3)await s3();else if(idx===4)await s4();else if(idx===5)await s5();else if(idx===6)await s6();else if(idx===7)await s7();
-  el.classList.remove('active');el.classList.add('done');pulse(`cp${idx}`);
+  el.classList.remove('active');el.classList.add('done');el.style.opacity='0.75';pulse('cp'+idx);
 }
 
 async function s0(){
@@ -317,7 +323,7 @@ document.getElementById('btnReset').addEventListener('click',resetAll);
 document.addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;if(e.code==='Space'||e.code==='ArrowRight'){e.preventDefault();document.getElementById('btnRun').click();}if(e.code==='KeyR'){e.preventDefault();resetAll();}if(e.code==='KeyA'){e.preventDefault();document.getElementById('btnAuto').click();}});
 function resetAll(){
   isRunning=false;currentStage=-1;syncBtn();
-  document.querySelectorAll('.stage').forEach(s=>s.classList.remove('active','done'));
+  document.querySelectorAll('.stage').forEach((s,i)=>{s.classList.remove('active','done');s.style.opacity=i===0?'1':'0.4';});
   document.getElementById('pf').style.width='0%';setIndicator('Ready');
   document.getElementById('resultBox').classList.remove('show');
   document.getElementById('noiseViz').innerHTML='';document.getElementById('genArch').innerHTML='';
@@ -328,6 +334,13 @@ function resetAll(){
   ['lossD','lossG'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.opacity='0';});
   document.getElementById('trainLoop').innerHTML='';document.getElementById('progressViz').innerHTML='';
 }
+
+// Set initial opacity on page load
+(function initOpacity(){
+  document.querySelectorAll('.stage').forEach((s,i)=>{
+    s.style.opacity = i===0 ? '1' : '0.4';
+  });
+})();
 syncBtn();
 </script>
 </body>

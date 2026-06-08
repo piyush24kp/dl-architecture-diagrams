@@ -92,10 +92,11 @@ header::after {
   gap: 0 16px;
   align-items: center;
   padding: 10px 0;
-  opacity: 0.35;
+  
   transition: opacity 0.4s;
   position: relative;
 }
+
 .stage.active { opacity: 1; }
 .stage.done { opacity: 0.75; }
 
@@ -1086,6 +1087,13 @@ function buildOutputBars() {
 
 // ─── STAGE RUNNERS ───────────────────────────────────────────
 async function runStage(idx) {
+  // Set opacity imperatively — no CSS fights
+  document.querySelectorAll('.stage').forEach((s, i) => {
+    if (i === idx) s.style.opacity = '1';
+    else if (s.classList.contains('done')) s.style.opacity = '0.75';
+    else s.style.opacity = '0.4';
+  });
+
   const stage = document.getElementById(`stage-${idx}`);
   stage.classList.add('active');
   document.getElementById('stepIndicator').innerHTML =
@@ -1103,6 +1111,7 @@ async function runStage(idx) {
 
   stage.classList.remove('active');
   stage.classList.add('done');
+  stage.style.opacity = '0.75';
 
   // pulse connector
   const cp = document.getElementById(`cp${idx}`);
@@ -1257,7 +1266,6 @@ function showResult() {
 function scrollToStage(idx) {
   const el = document.getElementById(`stage-${idx}`);
   if (!el) return;
-  const dockH = 90; // space reserved for floating dock
   const rect = el.getBoundingClientRect();
   const scrollTop = window.pageYOffset + rect.top - window.innerHeight / 2 + rect.height / 2;
   window.scrollTo({ top: Math.max(0, scrollTop), behavior: 'smooth' });
@@ -1281,9 +1289,10 @@ document.getElementById('btnRun').addEventListener('click', () => {
   if (isRunning) return;
   isRunning = true;
   syncBtn();
+  
   currentStage++;
   scrollToStage(currentStage);
-  runStage(currentStage).then(() => { isRunning = false; syncBtn(); });
+  runStage(currentStage).then(() => { isRunning = false; syncBtn();  });
 });
 
 document.getElementById('btnAuto').addEventListener('click', async () => {
@@ -1291,10 +1300,13 @@ document.getElementById('btnAuto').addEventListener('click', async () => {
   if (currentStage >= 7) { resetAll(); await delay(300); }
   isRunning = true;
   syncBtn();
+  
   while (currentStage < 7) {
     currentStage++;
     scrollToStage(currentStage);
+    
     await runStage(currentStage);
+    
     await delay(350);
   }
   isRunning = false;
@@ -1318,7 +1330,7 @@ function resetAll(){
   isRunning=false;
   currentStage=-1;
   syncBtn();
-  document.querySelectorAll('.stage').forEach(s=>{ s.classList.remove('active','done'); });
+  document.querySelectorAll('.stage').forEach((s,i)=>{ s.classList.remove('active','done'); s.style.opacity= i===0?'1':'0.4'; }); 
   document.getElementById('progressFill').style.width='0%';
   document.getElementById('stepIndicator').innerHTML='Ready to start<span class="cursor">_</span>';
   document.getElementById('resultBox').classList.remove('show');
@@ -1355,6 +1367,13 @@ function resetAll(){
 
 // ─── INIT ─────────────────────────────────────────────────────
 initUI();
+
+// Set initial opacity on page load
+(function initOpacity(){
+  document.querySelectorAll('.stage').forEach((s,i)=>{
+    s.style.opacity = i===0 ? '1' : '0.4';
+  });
+})();
 syncBtn();
 </script>
 </body>
