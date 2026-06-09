@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ResNet — Residual Network</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap');
+:root{--bg:#0b0f1a;--bg2:#111827;--line:#1e293b;--muted:#475569;--text:#e2e8f0;--dim:#94a3b8;--blue:#3b82f6;--blue2:#60a5fa;--cyan:#06b6d4;--green:#22c55e;--orange:#f97316;--purple:#a855f7;--pink:#ec4899;--red:#ef4444;--lime:#84cc16;--teal:#14b8a6;--yellow:#eab308;--a1:#f97316;--a2:#fb923c;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden;}
+header{text-align:center;padding:24px 20px 12px;position:relative;}
+header::after{content:'';display:block;height:1px;background:linear-gradient(90deg,transparent,var(--a1),var(--a2),transparent);margin-top:14px;opacity:0.5;}
+.nav-back{position:absolute;top:20px;left:20px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);text-decoration:none;border:1px solid var(--line);border-radius:4px;padding:4px 10px;transition:color 0.2s,border-color 0.2s;}
+.nav-back:hover{color:var(--a1);border-color:var(--a1);}
+.title{font-family:'Bebas Neue',sans-serif;font-size:clamp(24px,4vw,46px);letter-spacing:4px;background:linear-gradient(135deg,var(--a1),var(--a2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.subtitle{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);margin-top:4px;letter-spacing:2px;text-transform:uppercase;}
+.progress-wrap{position:sticky;top:0;z-index:100;background:var(--bg);border-bottom:1px solid var(--line);}
+.progress-track{height:3px;background:var(--line);}.progress-fill{height:100%;background:linear-gradient(90deg,var(--a1),var(--a2));width:0%;transition:width 0.4s;}
+.pipeline{display:flex;flex-direction:column;padding:10px 24px 110px;max-width:1150px;margin:0 auto;} 
+.stage{display:grid;grid-template-columns:130px 1fr 250px;gap:0 16px;align-items:center;padding:8px 0;transition:opacity 0.3s;position:relative;}
+.stage-label{text-align:right;padding-right:14px;}
+.stage-num{font-family:'Bebas Neue',sans-serif;font-size:28px;line-height:1;color:var(--muted);transition:color 0.3s;}
+.stage.active .stage-num{color:var(--a1);text-shadow:0 0 10px var(--a1);}.stage.done .stage-num{color:var(--green);}
+.stage-name{font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);}
+.stage.active .stage-name{color:var(--a2);}
+.sc{background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:12px 16px;transition:border-color 0.3s,box-shadow 0.3s;min-height:82px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;position:relative;overflow:hidden;}
+.stage.active .sc{border-color:rgba(249,115,22,0.45);box-shadow:0 0 22px rgba(249,115,22,0.1);}
+.stage.done .sc{border-color:rgba(34,197,94,0.2);}
+.stage.active .sc::before{content:'';position:absolute;top:-100%;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--a1),var(--a2),transparent);animation:scan 1.8s linear infinite;}
+@keyframes scan{to{top:200%;}}
+.sn{font-size:11px;line-height:1.55;color:var(--dim);}.sn b{color:var(--text);}
+.eq{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a1);background:rgba(249,115,22,0.08);border:1px solid rgba(249,115,22,0.2);padding:2px 8px;border-radius:3px;display:inline-block;margin-top:3px;}
+.conn{display:flex;height:18px;grid-column:1/-1;}.conn-line{width:2px;height:100%;background:var(--line);margin-left:96px;position:relative;overflow:hidden;}
+.cp{position:absolute;top:-20px;left:-3px;width:8px;height:20px;background:linear-gradient(to bottom,transparent,var(--a1),var(--a2));border-radius:4px;opacity:0;}
+.cp.go{animation:fd 0.6s ease-in forwards;}@keyframes fd{0%{top:-20px;opacity:1;}100%{top:100%;opacity:0;}}
+.done-check{position:absolute;top:8px;right:10px;font-size:13px;opacity:0;transition:opacity 0.4s;}.stage.done .done-check{opacity:1;}
+.chip{border:1px solid;border-radius:4px;padding:4px 9px;font-family:'JetBrains Mono',monospace;font-size:10px;text-align:center;transition:all 0.3s;opacity:0;}
+.result-box{margin:0 24px 110px;max-width:1102px;margin-left:auto;margin-right:auto;border:1px solid rgba(34,197,94,0.3);background:rgba(34,197,94,0.05);border-radius:8px;padding:14px 18px;display:none;}
+.result-box.show{display:flex;gap:14px;align-items:center;flex-wrap:wrap;animation:fi 0.5s ease;}
+@keyframes fi{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+.dock{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:9999;display:flex;align-items:center;gap:10px;padding:9px 16px;background:rgba(10,15,30,0.93);backdrop-filter:blur(16px);border:1px solid rgba(249,115,22,0.35);border-radius:50px;box-shadow:0 8px 40px rgba(0,0,0,0.5);white-space:nowrap;}
+.db{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.8px;padding:6px 14px;border-radius:30px;border:1px solid;cursor:pointer;transition:all 0.18s;text-transform:uppercase;user-select:none;}
+.db:active{transform:scale(0.95);}
+.db-n{background:var(--a1);border-color:var(--a2);color:#000;font-weight:700;}
+.db-n:hover{opacity:0.85;box-shadow:0 0 16px rgba(249,115,22,0.5);}
+.db-n:disabled{background:#1e293b;border-color:#334155;color:#475569;cursor:not-allowed;}
+.db-a{background:transparent;border-color:var(--a2);color:var(--a2);}
+.db-a:hover{background:rgba(251,146,60,0.12);}
+.db-r{background:transparent;border-color:#334155;color:var(--muted);}
+.db-r:hover{border-color:var(--cyan);color:var(--cyan);}
+.dsep{width:1px;height:20px;background:#1e293b;flex-shrink:0;}
+.dbadge{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a1);background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.25);padding:4px 10px;border-radius:20px;min-width:140px;text-align:center;}
+.dspeed{display:flex;align-items:center;gap:5px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);}
+.dspeed input{width:60px;accent-color:var(--a1);cursor:pointer;}
+.cursor{display:inline-block;animation:blink 1s step-end infinite;}@keyframes blink{50%{opacity:0;}}
+</style>
+</head>
+<body>
+<header>
+  <a class="nav-back" href="index.html">← All Diagrams</a>
+  <div class="title">ResNet — Residual Network</div>
+  <div class="subtitle">Skip Connections · Vanishing Gradient Fix · Deep Learning Breakthrough (He et al. 2015)</div>
+</header>
+<div class="progress-wrap"><div class="progress-track"><div class="progress-fill" id="pf"></div></div></div>
+<div class="pipeline" id="pipeline">
+
+<div class="stage" id="stage-0">
+  <div class="stage-label"><div class="stage-num">01</div><div class="stage-name">Input Image</div></div>
+  <div class="sc"><div><canvas id="inputImg" width="72" height="72" style="border-radius:4px;border:1px solid var(--line);"></canvas></div>
+    <div class="sn"><b>224×224×3 RGB</b><br>Standard ImageNet input<br>Normalised μ=[0.485,0.456,0.406]<br><span class="eq">H×W×C tensor</span></div><div class="done-check">✅</div></div>
+  <div class="sn" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">Any resolution<br>→ resize to 224×224<br>before Conv1</span></div>
+</div><div class="conn"><div class="conn-line"><div class="cp" id="cp0"></div></div></div>
+<div class="stage" id="stage-1">
+  <div class="stage-label"><div class="stage-num">02</div><div class="stage-name">Conv1 + MaxPool</div></div>
+  <div class="sc"><div id="conv1viz" style="display:flex;gap:8px;align-items:center;"></div>
+    <div class="sn"><b>7×7 conv, stride 2, 64 filters</b><br>224→112 spatial dims<br>Then 3×3 MaxPool stride 2<br><span class="eq">112→56 feature maps</span></div><div class="done-check">✅</div></div>
+  <div class="sn" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">Output:<br>56×56×64<br>~75% spatial<br>reduction</span></div>
+</div><div class="conn"><div class="conn-line"><div class="cp" id="cp1"></div></div></div>
+<div class="stage" id="stage-2">
+  <div class="stage-label"><div class="stage-num">03</div><div class="stage-name">Residual Block</div></div>
+  <div class="sc"><div id="resblockViz" style="display:flex;gap:6px;align-items:stretch;min-width:320px;"></div>
+    <div class="sn"><b>The key innovation!</b><br>F(x) + x skip connection<br>Gradients flow directly back<br><span class="eq">H(x) = F(x) + x</span></div><div class="done-check">✅</div></div>
+  <div class="sn" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">Without skip:<br>152-layer net<br>degraded!<br>With: improves</span></div>
+</div><div class="conn"><div class="conn-line"><div class="cp" id="cp2"></div></div></div>
+<div class="stage" id="stage-3">
+  <div class="stage-label"><div class="stage-num">04</div><div class="stage-name">Bottleneck Block</div></div>
+  <div class="sc"><div id="bottleViz" style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;"></div>
+    <div class="sn"><b>3-layer bottleneck</b><br>1×1 compress → 3×3 conv → 1×1 expand<br>Cheaper than two 3×3s<br><span class="eq">ResNet-50/101/152 use this</span></div><div class="done-check">✅</div></div>
+  <div class="sn" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">64→64→256<br>4× expansion<br>reduces params<br>by 8×</span></div>
+</div><div class="conn"><div class="conn-line"><div class="cp" id="cp3"></div></div></div>
+<div class="stage" id="stage-4">
+  <div class="stage-label"><div class="stage-num">05</div><div class="stage-name">4 Conv Stages</div></div>
+  <div class="sc"><div id="stagesViz" style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;"></div>
+    <div class="sn"><b>Progressive downsampling</b><br>Stage 1-4: 56→28→14→7 px<br>Channels: 64→128→256→512<br><span class="eq">First block of each stage: stride 2</span></div><div class="done-check">✅</div></div>
+  <div class="sn" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">ResNet-50:<br>3+4+6+3=16<br>bottleneck<br>blocks</span></div>
+</div><div class="conn"><div class="conn-line"><div class="cp" id="cp4"></div></div></div>
+<div class="stage" id="stage-5">
+  <div class="stage-label"><div class="stage-num">06</div><div class="stage-name">Global Avg Pool</div></div>
+  <div class="sc"><div id="gapViz" style="display:flex;gap:10px;align-items:center;"></div>
+    <div class="sn"><b>7×7 → 1×1×512</b><br>Average all spatial positions<br>Replaces FC+flatten<br><span class="eq">No spatial info needed for class</span></div><div class="done-check">✅</div></div>
+  <div class="sn" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">Much fewer<br>params than<br>AlexNet FC<br>layers</span></div>
+</div><div class="conn"><div class="conn-line"><div class="cp" id="cp5"></div></div></div>
+<div class="stage" id="stage-6">
+  <div class="stage-label"><div class="stage-num">07</div><div class="stage-name">FC + Softmax</div></div>
+  <div class="sc"><div id="fcViz" style="display:flex;gap:8px;align-items:flex-end;height:65px;"></div>
+    <div class="sn"><b>512 → 1000 classes</b><br>Single linear layer<br>Softmax probabilities<br><span class="eq">Top-5 accuracy: 93.3%</span></div><div class="done-check">✅</div></div>
+  <div class="sn" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">ImageNet<br>top-1: 76.1%<br>(ResNet-50)</span></div>
+</div>
+</div>
+<div class="result-box" id="resultBox">
+  <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;color:var(--green);">✅ ResNet Forward Pass Complete</div>
+  <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text);">Residual connections solve vanishing gradients → deep networks finally work</div>
+  <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--a1);background:rgba(255,100,50,0.1);border:1px solid rgba(255,100,50,0.3);padding:3px 10px;border-radius:4px;">Skip connections · Bottleneck blocks · 152 layers · 76.1% ImageNet top-1</div>
+</div>
+<div class="dock">
+  <button class="db db-n" id="btnRun">▶ Next Step</button>
+  <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#334155;border:1px solid #1e293b;border-radius:3px;padding:1px 5px;">Space</span>
+  <div class="dsep"></div><button class="db db-a" id="btnAuto">⚡ Auto</button>
+  <div class="dsep"></div><div class="dbadge" id="stepIndicator">Ready<span class="cursor">_</span></div>
+  <div class="dsep"></div>
+  <div class="dspeed"><span>Speed</span><input type="range" id="speedSlider" min="0.5" max="3" step="0.5" value="1"><span id="speedLabel">1×</span></div>
+  <div class="dsep"></div><button class="db db-r" id="btnReset">↺</button>
+</div>
+<script>
+let currentStage=-1,isRunning=false,speed=1;const TOTAL=7;
+document.getElementById('speedSlider').addEventListener('input',e=>{speed=parseFloat(e.target.value);document.getElementById('speedLabel').textContent=speed+'×';});
+function delay(ms){return new Promise(r=>setTimeout(r,ms/speed));}
+function scrollToStage(idx){const el=document.getElementById('stage-'+idx);if(!el)return;window.scrollTo({top:Math.max(0,window.pageYOffset+el.getBoundingClientRect().top-window.innerHeight/2+el.offsetHeight/2),behavior:'smooth'});}
+function syncBtn(){const b=document.getElementById('btnRun');if(currentStage>=TOTAL-1){b.textContent='↺ Restart';b.disabled=false;}else{b.innerHTML='▶ Next Step';b.disabled=isRunning;}}
+function setIndicator(html){document.getElementById('stepIndicator').innerHTML=html+'<span class="cursor">_</span>';}
+function fillProgress(){document.getElementById('pf').style.width=((currentStage+1)/TOTAL*100)+'%';}
+function pulse(id){const e=document.getElementById(id);if(e){e.classList.add('go');setTimeout(()=>e.classList.remove('go'),700);}}
+async function runStage(idx){
+  document.querySelectorAll('.stage').forEach((s,i)=>{
+    if(i===idx)s.style.opacity='1';
+    else if(s.classList.contains('done'))s.style.opacity='0.75';
+    else s.style.opacity='0.4';
+  });
+  const el=document.getElementById('stage-'+idx);
+  el.classList.add('active');
+  setIndicator('<span style="color:var(--a1);">Stage '+(idx+1)+'/7</span>');
+  fillProgress();
+  if(idx===0)await s0();else if(idx===1)await s1();else if(idx===2)await s2();else if(idx===3)await s3();else if(idx===4)await s4();else if(idx===5)await s5();else if(idx===6)await s6();
+  el.classList.remove('active');el.classList.add('done');el.style.opacity='0.75';
+  pulse('cp'+idx);
+}
+
+async function s0(){
+  const c=document.getElementById('inputImg'),ctx=c.getContext('2d');
+  ctx.fillStyle='#0b0f1a';ctx.fillRect(0,0,72,72);
+  const g=ctx.createRadialGradient(36,30,4,36,30,28);g.addColorStop(0,'#fbbf24');g.addColorStop(1,'#f59e0b');
+  ctx.fillStyle=g;ctx.beginPath();ctx.arc(36,30,26,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#1e293b';ctx.beginPath();ctx.arc(28,26,4,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(44,26,4,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(36,36,8,0,Math.PI);ctx.strokeStyle='#1e293b';ctx.lineWidth=2;ctx.stroke();
+  await delay(400);
+}
+async function s1(){
+  const v=document.getElementById('conv1viz');v.innerHTML='';
+  const parts=[{t:'Conv1\n7×7×64',c:'var(--a1)'},{t:'BN+\nReLU',c:'var(--green)'},{t:'MaxPool\n3×3 s2',c:'var(--orange)'}];
+  for(const p of parts){
+    const d=document.createElement('div');d.style.cssText='border:1px solid;border-radius:4px;padding:5px 10px;font-family:"JetBrains Mono",monospace;font-size:9px;color:'+p.c+';border-color:'+p.c+';background:rgba(0,0,0,0.3);opacity:0;transition:opacity 0.4s;text-align:center;white-space:pre;';d.textContent=p.t;v.appendChild(d);
+    if(parts.indexOf(p)<parts.length-1){const a=document.createElement('span');a.style.cssText='color:var(--muted);align-self:center;font-size:14px;';a.textContent='→';v.appendChild(a);}
+    await delay(200);d.style.opacity='1';
+  }
+  await delay(300);
+}
+async function s2(){
+  const v=document.getElementById('resblockViz');v.innerHTML='';
+  // Skip connection diagram
+  const wrap=document.createElement('div');wrap.style.cssText='display:flex;flex-direction:column;gap:4px;position:relative;';
+  // Main path
+  const mainPath=document.createElement('div');mainPath.style.cssText='display:flex;gap:4px;align-items:center;';
+  const blocks=[{t:'3×3 Conv\n64 filters',c:'var(--a1)'},{t:'BN+ReLU',c:'var(--green)'},{t:'3×3 Conv\n64 filters',c:'var(--a1)'},{t:'BN',c:'var(--orange)'}];
+  const xIn=document.createElement('div');xIn.style.cssText='font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--a1);padding:4px 8px;border:1px solid var(--a1);border-radius:3px;opacity:0;transition:opacity 0.4s;';xIn.textContent='x';mainPath.appendChild(xIn);
+  await delay(150);xIn.style.opacity='1';
+  for(const b of blocks){
+    const arr=document.createElement('span');arr.style.cssText='color:var(--muted);font-size:12px;';arr.textContent='→';mainPath.appendChild(arr);
+    const d=document.createElement('div');d.style.cssText='border:1px solid;border-radius:4px;padding:4px 7px;font-family:"JetBrains Mono",monospace;font-size:9px;color:'+b.c+';border-color:'+b.c+';background:rgba(0,0,0,0.3);opacity:0;transition:opacity 0.4s;text-align:center;white-space:pre;';d.textContent=b.t;mainPath.appendChild(d);
+    await delay(180);d.style.opacity='1';
+  }
+  // ReLU after add
+  const plus=document.createElement('span');plus.style.cssText='color:var(--yellow);font-size:16px;font-weight:700;';plus.textContent=' ⊕ ReLU';mainPath.appendChild(plus);
+  // Skip
+  const skipRow=document.createElement('div');skipRow.style.cssText='display:flex;align-items:center;gap:4px;margin-top:4px;padding-left:28px;';
+  const skipLabel=document.createElement('div');skipLabel.style.cssText='font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--yellow);border:1px dashed var(--yellow);border-radius:3px;padding:3px 10px;opacity:0;transition:opacity 0.4s;';skipLabel.textContent='Skip: x (identity)';
+  skipRow.appendChild(skipLabel);
+  await delay(200);skipLabel.style.opacity='1';
+  wrap.appendChild(mainPath);wrap.appendChild(skipRow);
+  v.appendChild(wrap);
+  await delay(300);
+}
+async function s3(){
+  const v=document.getElementById('bottleViz');v.innerHTML='';
+  const parts=[{t:'1×1 Conv\n256→64\n(compress)',c:'var(--cyan)'},{t:'3×3 Conv\n64→64\n(process)',c:'var(--a1)'},{t:'1×1 Conv\n64→256\n(expand)',c:'var(--purple)'},{t:'⊕ skip\nx→256\n(proj if needed)',c:'var(--yellow)'}];
+  for(const p of parts){
+    const d=document.createElement('div');d.style.cssText='border:1px solid;border-radius:4px;padding:5px 9px;font-family:"JetBrains Mono",monospace;font-size:9px;color:'+p.c+';border-color:'+p.c+';background:rgba(0,0,0,0.3);opacity:0;transition:opacity 0.4s;text-align:center;white-space:pre;';d.textContent=p.t;v.appendChild(d);
+    if(parts.indexOf(p)<parts.length-1){const a=document.createElement('span');a.style.cssText='color:var(--muted);align-self:center;font-size:12px;';a.textContent='→';v.appendChild(a);}
+    await delay(220);d.style.opacity='1';
+  }
+  await delay(300);
+}
+async function s4(){
+  const v=document.getElementById('stagesViz');v.innerHTML='';
+  const stgs=[{name:'Stage 1',size:'56×56',ch:'64',blocks:3,c:'var(--cyan)'},{name:'Stage 2',size:'28×28',ch:'128',blocks:4,c:'var(--a1)'},{name:'Stage 3',size:'14×14',ch:'256',blocks:6,c:'var(--purple)'},{name:'Stage 4',size:'7×7',ch:'512',blocks:3,c:'var(--pink)'}];
+  for(const s of stgs){
+    const d=document.createElement('div');d.style.cssText='border:1px solid;border-radius:5px;padding:6px 10px;font-family:"JetBrains Mono",monospace;font-size:9px;color:'+s.c+';border-color:'+s.c+';background:rgba(0,0,0,0.3);opacity:0;transition:opacity 0.4s;text-align:center;';
+    d.innerHTML='<div style="font-size:11px;font-weight:700;">'+s.name+'</div><div>'+s.size+'×'+s.ch+'</div><div style="color:var(--muted);">'+s.blocks+' blocks</div>';v.appendChild(d);
+    if(stgs.indexOf(s)<stgs.length-1){const a=document.createElement('span');a.style.cssText='color:var(--muted);align-self:center;font-size:18px;';a.textContent='→';v.appendChild(a);}
+    await delay(220);d.style.opacity='1';
+  }
+  await delay(300);
+}
+async function s5(){
+  const v=document.getElementById('gapViz');v.innerHTML='';
+  const fmBox=document.createElement('div');fmBox.style.cssText='text-align:center;opacity:0;transition:opacity 0.4s;';
+  const canvas=document.createElement('canvas');canvas.width=50;canvas.height=50;canvas.style.cssText='border:1px solid var(--line);border-radius:3px;';
+  const ctx=canvas.getContext('2d');
+  const colors=['#a855f7','#3b82f6','#06b6d4','#22c55e'];
+  for(let r=0;r<7;r++)for(let c2=0;c2<7;c2++){ctx.fillStyle=colors[(r+c2)%4];ctx.globalAlpha=0.4+Math.random()*0.5;ctx.fillRect(c2*7,r*7,7,7);}
+  ctx.globalAlpha=1;
+  const lbl=document.createElement('div');lbl.style.cssText='font-family:"JetBrains Mono",monospace;font-size:8px;color:var(--muted);margin-top:3px;';lbl.textContent='7×7×512';
+  fmBox.appendChild(canvas);fmBox.appendChild(lbl);v.appendChild(fmBox);
+  const arr=document.createElement('div');arr.style.cssText='font-size:22px;color:var(--muted);align-self:center;opacity:0;transition:opacity 0.4s;';arr.textContent='→ GAP →';v.appendChild(arr);
+  const outBox=document.createElement('div');outBox.style.cssText='text-align:center;opacity:0;transition:opacity 0.4s;';
+  const vec=document.createElement('div');vec.style.cssText='display:flex;flex-direction:column;gap:1.5px;';
+  for(let i=0;i<8;i++){const b=document.createElement('div');b.style.cssText='width:14px;height:8px;border-radius:1px;background:var(--a1);opacity:'+(0.3+Math.random()*0.7)+';';vec.appendChild(b);}
+  const lbl2=document.createElement('div');lbl2.style.cssText='font-family:"JetBrains Mono",monospace;font-size:8px;color:var(--muted);margin-top:3px;';lbl2.textContent='1×1×512';
+  outBox.appendChild(vec);outBox.appendChild(lbl2);v.appendChild(outBox);
+  await delay(200);fmBox.style.opacity='1';await delay(300);arr.style.opacity='1';await delay(300);outBox.style.opacity='1';
+  await delay(300);
+}
+async function s6(){
+  const v=document.getElementById('fcViz');v.innerHTML='';
+  const classes=['cat','dog','car','plane','boat','fish','bird','frog','deer','truck'];
+  const probs=[0.72,0.12,0.06,0.04,0.02,0.01,0.01,0.01,0.005,0.005];
+  const cols=['#22c55e','#3b82f6','#a855f7','#06b6d4','#f97316','#ec4899','#eab308','#ef4444','#84cc16','#14b8a6'];
+  for(let i=0;i<10;i++){
+    const w=document.createElement('div');w.style.cssText='display:flex;flex-direction:column;align-items:center;gap:2px;';
+    const val=document.createElement('div');val.style.cssText='font-family:"JetBrains Mono",monospace;font-size:8px;color:'+cols[i]+';height:14px;';val.textContent='';
+    const bar=document.createElement('div');bar.style.cssText='width:20px;height:2px;border-radius:2px 2px 0 0;background:'+cols[i]+';transition:height 0.5s cubic-bezier(0.34,1.56,0.64,1);';
+    const lbl=document.createElement('div');lbl.style.cssText='font-family:"JetBrains Mono",monospace;font-size:7px;color:var(--muted);writing-mode:vertical-rl;transform:rotate(180deg);height:24px;';lbl.textContent=classes[i];
+    w.appendChild(val);w.appendChild(bar);w.appendChild(lbl);v.appendChild(w);
+    await delay(80);bar.style.height=(probs[i]*62)+'px';val.textContent=Math.round(probs[i]*100)+'%';
+    if(i===0)bar.style.boxShadow='0 0 10px #22c55e';
+  }
+  await delay(400);
+  document.getElementById('resultBox').classList.add('show');
+  setIndicator('<span style="color:var(--green);">✅ Complete!</span>');
+}
+document.getElementById('btnRun').addEventListener('click',()=>{if(currentStage>=TOTAL-1){resetAll();return;}if(isRunning)return;isRunning=true;syncBtn();currentStage++;scrollToStage(currentStage);runStage(currentStage).then(()=>{isRunning=false;syncBtn();});}); 
+document.getElementById('btnAuto').addEventListener('click',async()=>{if(isRunning)return;if(currentStage>=TOTAL-1){resetAll();await delay(300);}isRunning=true;syncBtn();while(currentStage<TOTAL-1){currentStage++;scrollToStage(currentStage);await runStage(currentStage);await delay(350);}isRunning=false;syncBtn();});
+document.getElementById('btnReset').addEventListener('click',resetAll);
+document.addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;if(e.code==='Space'||e.code==='ArrowRight'){e.preventDefault();document.getElementById('btnRun').click();}if(e.code==='KeyR'){e.preventDefault();resetAll();}if(e.code==='KeyA'){e.preventDefault();document.getElementById('btnAuto').click();}});
+function resetAll(){isRunning=false;currentStage=-1;syncBtn();document.querySelectorAll('.stage').forEach((s,i)=>{s.classList.remove('active','done');s.style.opacity=i===0?'1':'0.4';});document.getElementById('pf').style.width='0%';setIndicator('Ready');document.getElementById('resultBox').classList.remove('show');document.getElementById('conv1viz').innerHTML='';document.getElementById('resblockViz').innerHTML='';document.getElementById('bottleViz').innerHTML='';document.getElementById('stagesViz').innerHTML='';document.getElementById('gapViz').innerHTML='';document.getElementById('fcViz').innerHTML='';const ic=document.getElementById('inputImg');if(ic)ic.getContext('2d').clearRect(0,0,72,72);}
+(function initOpacity(){document.querySelectorAll('.stage').forEach((s,i)=>{s.style.opacity=i===0?'1':'0.4';});})();
+syncBtn();
+</script>
+</body>
+</html>

@@ -6,267 +6,219 @@
 <title>Deep Learning Architectures — Interactive Visual Library</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap');
-:root{
-  --bg:#0b0f1a; --bg2:#111827; --bg3:#1a2235;
-  --line:#1e293b; --muted:#475569; --text:#e2e8f0; --dim:#94a3b8;
-  --blue:#3b82f6; --cyan:#06b6d4; --green:#22c55e; --orange:#f97316;
-  --purple:#a855f7; --pink:#ec4899; --red:#ef4444; --lime:#84cc16;
-  --teal:#14b8a6; --yellow:#eab308;
-}
+:root{--bg:#0b0f1a;--bg2:#111827;--bg3:#1a2235;--line:#1e293b;--muted:#475569;--text:#e2e8f0;--dim:#94a3b8;}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;}
-
-/* ── HERO ── */
-.hero{text-align:center;padding:56px 20px 40px;position:relative;overflow:hidden;}
-.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 50% at 50% 0%,rgba(59,130,246,0.08),transparent);pointer-events:none;}
-.hero-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(32px,6vw,72px);letter-spacing:5px;background:linear-gradient(135deg,#60a5fa,#a855f7,#06b6d4,#22c55e);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1.05;}
-.hero-sub{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--dim);margin-top:10px;letter-spacing:3px;text-transform:uppercase;}
-.hero-byline{margin-top:14px;font-size:13px;color:var(--muted);}
-.hero-byline span{color:var(--blue2,#60a5fa);font-weight:600;}
-.divider{height:1px;background:linear-gradient(90deg,transparent,var(--blue),var(--purple),var(--cyan),transparent);opacity:0.35;margin:0 40px;}
-
-/* ── KEY ── */
-.key-row{display:flex;gap:16px;justify-content:center;padding:18px 20px 4px;flex-wrap:wrap;}
-.key-item{display:flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);}
-.key-dot{width:8px;height:8px;border-radius:50%;}
-
-/* ── GRID ── */
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:18px;padding:28px 32px 60px;max-width:1280px;margin:0 auto;}
-
-/* ── CARD ── */
-.card{border:1px solid var(--line);border-radius:12px;overflow:hidden;transition:transform 0.2s,box-shadow 0.2s,border-color 0.2s;background:var(--bg2);cursor:pointer;text-decoration:none;display:block;position:relative;}
-.card:hover{transform:translateY(-4px);}
-.card-banner{height:6px;}
-.card-body{padding:18px 18px 14px;}
-.card-icon{font-size:28px;margin-bottom:8px;}
-.card-title{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;line-height:1.1;margin-bottom:6px;}
-.card-desc{font-size:12px;color:var(--dim);line-height:1.55;margin-bottom:12px;}
-.card-tags{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:14px;}
-.tag{font-family:'JetBrains Mono',monospace;font-size:9px;padding:2px 7px;border-radius:10px;border:1px solid;text-transform:uppercase;letter-spacing:0.5px;}
-.card-footer{display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid var(--line);}
-.card-stages{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);}
-.card-cta{font-family:'JetBrains Mono',monospace;font-size:10px;padding:5px 14px;border-radius:20px;border:1px solid;transition:all 0.18s;letter-spacing:0.5px;}
-.card-badge{position:absolute;top:14px;right:14px;font-family:'JetBrains Mono',monospace;font-size:8px;padding:2px 7px;border-radius:10px;text-transform:uppercase;letter-spacing:0.5px;}
-
-/* ── SHORTCUTS HINT ── */
-.shortcuts{text-align:center;padding:0 20px 24px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);}
-.kbd{border:1px solid var(--line);border-radius:3px;padding:1px 6px;background:var(--bg3);margin:0 2px;}
-
-/* ── FOOTER ── */
-footer{text-align:center;padding:20px;border-top:1px solid var(--line);font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);}
-
-/* ── SHARING SECTION ── */
-.share-section{max-width:860px;margin:0 auto 40px;padding:0 32px;}
-.share-box{border:1px solid var(--line);border-radius:10px;background:var(--bg2);padding:22px 24px;}
-.share-title{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;color:var(--cyan);margin-bottom:14px;}
-.share-options{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;}
-.share-opt{border:1px solid var(--line);border-radius:7px;padding:12px 14px;background:var(--bg3);}
-.share-opt-title{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-bottom:4px;}
-.share-opt-desc{font-size:11px;color:var(--dim);line-height:1.5;}
-.share-opt-badge{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:8px;padding:1px 6px;border-radius:8px;margin-bottom:5px;text-transform:uppercase;}
+.hero{text-align:center;padding:52px 20px 36px;position:relative;}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 50% at 50% 0%,rgba(59,130,246,0.06),transparent);pointer-events:none;}
+.hero-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(30px,6vw,68px);letter-spacing:5px;background:linear-gradient(135deg,#60a5fa,#a855f7,#06b6d4,#22c55e);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1.05;}
+.hero-sub{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);margin-top:8px;letter-spacing:3px;text-transform:uppercase;}
+.hero-count{font-family:'JetBrains Mono',monospace;font-size:12px;color:rgba(96,165,250,0.7);margin-top:6px;}
+.divider{height:1px;background:linear-gradient(90deg,transparent,#3b82f6,#a855f7,#06b6d4,transparent);opacity:0.3;margin:0 40px;}
+.section-label{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:2px;padding:22px 32px 8px;}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;padding:0 32px 16px;}
+.card{border:1px solid var(--line);border-radius:10px;overflow:hidden;transition:transform 0.2s,box-shadow 0.2s,border-color 0.2s;background:var(--bg2);cursor:pointer;text-decoration:none;display:block;}
+.card:hover{transform:translateY(-3px);}
+.banner{height:5px;}
+.body{padding:16px 16px 12px;}
+.card-title{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;line-height:1.1;margin-bottom:5px;}
+.card-desc{font-size:11px;color:var(--dim);line-height:1.5;margin-bottom:10px;}
+.tags{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px;}
+.tag{font-family:'JetBrains Mono',monospace;font-size:8px;padding:2px 6px;border-radius:8px;border:1px solid;text-transform:uppercase;}
+.footer-row{display:flex;align-items:center;justify-content:space-between;padding-top:9px;border-top:1px solid var(--line);}
+.stages-txt{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);}
+.cta{font-family:'JetBrains Mono',monospace;font-size:10px;padding:4px 12px;border-radius:18px;border:1px solid;transition:all 0.18s;}
+.kbd{border:1px solid var(--line);border-radius:3px;padding:1px 6px;background:var(--bg3);font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);}
+.key-row{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;padding:14px 20px 6px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);}
+footer{text-align:center;padding:24px;border-top:1px solid var(--line);font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);}
 </style>
 </head>
 <body>
-
 <div class="hero">
   <div class="hero-title">Deep Learning<br>Architecture Library</div>
-  <div class="hero-sub">8 Interactive Animated Diagrams · Step by Step · Keyboard Shortcuts</div>
-  <div class="hero-byline">Built by <span>Piyush</span> · MS AI/ML · LJMU London</div>
+  <div class="hero-sub">15 Interactive Animated Diagrams · Step by Step</div>
+  <div class="hero-count">Foundations · Generative · Vision · Language · Applied</div>
 </div>
 <div class="divider"></div>
-
 <div class="key-row">
-  <div class="key-item"><div class="key-dot" style="background:var(--blue);"></div>Foundational</div>
-  <div class="key-item"><div class="key-dot" style="background:var(--purple);"></div>Generative</div>
-  <div class="key-item"><div class="key-dot" style="background:var(--cyan);"></div>Vision-Language</div>
-  <div class="key-item"><div class="key-dot" style="background:var(--lime);"></div>Sequence</div>
-  <div class="key-item" style="gap:10px;"><span class="kbd">Space</span> = Next step &nbsp; <span class="kbd">A</span> = Auto-run &nbsp; <span class="kbd">R</span> = Reset</div>
+  <span><span class="kbd">Space</span> or <span class="kbd">→</span> = next step</span>
+  <span><span class="kbd">A</span> = auto-run all</span>
+  <span><span class="kbd">R</span> = reset</span>
 </div>
 
+<div class="section-label">⚡ Foundations</div>
 <div class="grid">
 
-  <!-- CNN -->
-  <a class="card" href="cnn_interactive_animated.html"
-     style="border-color:rgba(6,182,212,0.25);"
-     onmouseover="this.style.borderColor='rgba(6,182,212,0.6)';this.style.boxShadow='0 0 28px rgba(6,182,212,0.15)'"
-     onmouseout="this.style.borderColor='rgba(6,182,212,0.25)';this.style.boxShadow=''">
-    <div class="card-banner" style="background:linear-gradient(90deg,var(--cyan),var(--blue));"></div>
-    <div class="card-body">
-      <div class="card-icon">🔬</div>
-      <div class="card-title" style="color:var(--cyan);">CNN</div>
-      <div class="card-desc">Convolutional Neural Network. How images flow through filters, pooling, and fully-connected layers to classify objects.</div>
-      <div class="card-tags">
-        <span class="tag" style="border-color:rgba(6,182,212,0.4);color:var(--cyan);background:rgba(6,182,212,0.06);">vision</span>
-        <span class="tag" style="border-color:rgba(6,182,212,0.3);color:var(--muted);background:rgba(6,182,212,0.04);">classification</span>
-        <span class="tag" style="border-color:rgba(6,182,212,0.3);color:var(--muted);background:rgba(6,182,212,0.04);">foundational</span>
-      </div>
-      <div class="card-footer">
-        <div class="card-stages">📍 9 stages</div>
-        <div class="card-cta" style="border-color:var(--cyan);color:var(--cyan);">Open →</div>
-      </div>
-    </div>
-  </a>
+<a class="card" href="cnn_interactive_animated.html" style="border-color:rgba(6,182,212,0.2);" onmouseover="this.style.borderColor='rgba(6,182,212,0.55)';this.style.boxShadow='0 0 24px rgba(6,182,212,0.12)'" onmouseout="this.style.borderColor='rgba(6,182,212,0.2)';this.style.boxShadow=''">
+  <div class="banner" style="background:linear-gradient(90deg,#06b6d4,#3b82f6);"></div>
+  <div class="body">
+    <div class="card-title" style="color:#06b6d4;">CNN</div>
+    <div class="card-desc">Conv filters, ReLU, MaxPool, FC layers — the classic image pipeline</div>
+    <div class="tags"><span class="tag" style="border-color:rgba(6,182,212,0.4);color:#06b6d4;">vision</span><span class="tag" style="border-color:rgba(6,182,212,0.2);color:var(--muted);">classification</span></div>
+    <div class="footer-row"><span class="stages-txt">9 stages</span><span class="cta" style="border-color:#06b6d4;color:#06b6d4;">Open →</span></div>
+  </div>
+</a>
 
-  <!-- TRANSFORMER -->
-  <a class="card" href="transformer_interactive.html"
-     style="border-color:rgba(168,85,247,0.25);"
-     onmouseover="this.style.borderColor='rgba(168,85,247,0.6)';this.style.boxShadow='0 0 28px rgba(168,85,247,0.15)'"
-     onmouseout="this.style.borderColor='rgba(168,85,247,0.25)';this.style.boxShadow=''">
-    <div class="card-banner" style="background:linear-gradient(90deg,var(--purple),var(--blue));"></div>
-    <div class="card-body">
-      <div class="card-icon">⚡</div>
-      <div class="card-title" style="color:var(--purple);">Transformer</div>
-      <div class="card-desc">Self-attention, encoder-decoder, positional encoding. The architecture behind GPT, BERT, T5, and every modern LLM.</div>
-      <div class="card-tags">
-        <span class="tag" style="border-color:rgba(168,85,247,0.4);color:var(--purple);background:rgba(168,85,247,0.06);">attention</span>
-        <span class="tag" style="border-color:rgba(168,85,247,0.3);color:var(--muted);background:rgba(168,85,247,0.04);">NLP</span>
-        <span class="tag" style="border-color:rgba(168,85,247,0.3);color:var(--muted);background:rgba(168,85,247,0.04);">foundational</span>
-      </div>
-      <div class="card-footer">
-        <div class="card-stages">📍 9 stages</div>
-        <div class="card-cta" style="border-color:var(--purple);color:var(--purple);">Open →</div>
-      </div>
-    </div>
-  </a>
+<a class="card" href="resnet_interactive.html" style="border-color:rgba(249,115,22,0.2);" onmouseover="this.style.borderColor='rgba(249,115,22,0.55)';this.style.boxShadow='0 0 24px rgba(249,115,22,0.12)'" onmouseout="this.style.borderColor='rgba(249,115,22,0.2)';this.style.boxShadow=''">
+  <div class="banner" style="background:linear-gradient(90deg,#f97316,#fb923c);"></div>
+  <div class="body">
+    <div class="card-title" style="color:#f97316;">ResNet</div>
+    <div class="card-desc">Skip connections, bottleneck blocks, residual learning — why deep networks finally worked</div>
+    <div class="tags"><span class="tag" style="border-color:rgba(249,115,22,0.4);color:#f97316;">skip connections</span><span class="tag" style="border-color:rgba(249,115,22,0.2);color:var(--muted);">He 2015</span></div>
+    <div class="footer-row"><span class="stages-txt">7 stages</span><span class="cta" style="border-color:#f97316;color:#f97316;">Open →</span></div>
+  </div>
+</a>
 
-  <!-- BERT -->
-  <a class="card" href="bert_interactive.html"
-     style="border-color:rgba(59,130,246,0.25);"
-     onmouseover="this.style.borderColor='rgba(59,130,246,0.6)';this.style.boxShadow='0 0 28px rgba(59,130,246,0.15)'"
-     onmouseout="this.style.borderColor='rgba(59,130,246,0.25)';this.style.boxShadow=''">
-    <div class="card-banner" style="background:linear-gradient(90deg,var(--blue),var(--blue2,#60a5fa));"></div>
-    <div class="card-body">
-      <div class="card-icon">🧠</div>
-      <div class="card-title" style="color:var(--blue2,#60a5fa);">BERT</div>
-      <div class="card-desc">Bidirectional encoder. MLM + NSP pretraining, contextual embeddings, fine-tuning on classification, NER, and QA.</div>
-      <div class="card-tags">
-        <span class="tag" style="border-color:rgba(59,130,246,0.4);color:var(--blue2,#60a5fa);background:rgba(59,130,246,0.06);">bidirectional</span>
-        <span class="tag" style="border-color:rgba(59,130,246,0.3);color:var(--muted);background:rgba(59,130,246,0.04);">pretraining</span>
-        <span class="tag" style="border-color:rgba(59,130,246,0.3);color:var(--muted);background:rgba(59,130,246,0.04);">NLP</span>
-      </div>
-      <div class="card-footer">
-        <div class="card-stages">📍 8 stages</div>
-        <div class="card-cta" style="border-color:var(--blue);color:var(--blue);">Open →</div>
-      </div>
-    </div>
-  </a>
+<a class="card" href="transformer_interactive.html" style="border-color:rgba(168,85,247,0.2);" onmouseover="this.style.borderColor='rgba(168,85,247,0.55)';this.style.boxShadow='0 0 24px rgba(168,85,247,0.12)'" onmouseout="this.style.borderColor='rgba(168,85,247,0.2)';this.style.boxShadow=''">
+  <div class="banner" style="background:linear-gradient(90deg,#a855f7,#3b82f6);"></div>
+  <div class="body">
+    <div class="card-title" style="color:#a855f7;">Transformer</div>
+    <div class="card-desc">Multi-head attention, encoder-decoder, positional encoding — the architecture behind every LLM</div>
+    <div class="tags"><span class="tag" style="border-color:rgba(168,85,247,0.4);color:#a855f7;">attention</span><span class="tag" style="border-color:rgba(168,85,247,0.2);color:var(--muted);">Vaswani 2017</span></div>
+    <div class="footer-row"><span class="stages-txt">9 stages</span><span class="cta" style="border-color:#a855f7;color:#a855f7;">Open →</span></div>
+  </div>
+</a>
 
-  <!-- VAE -->
-  <a class="card" href="vae_interactive.html"
-     style="border-color:rgba(20,184,166,0.25);"
-     onmouseover="this.style.borderColor='rgba(20,184,166,0.6)';this.style.boxShadow='0 0 28px rgba(20,184,166,0.15)'"
-     onmouseout="this.style.borderColor='rgba(20,184,166,0.25)';this.style.boxShadow=''">
-    <div class="card-banner" style="background:linear-gradient(90deg,var(--teal),var(--purple));"></div>
-    <div class="card-body">
-      <div class="card-icon">🌊</div>
-      <div class="card-title" style="color:var(--teal);">VAE</div>
-      <div class="card-desc">Variational Autoencoder. Reparameterization trick, ELBO loss, continuous latent space, generation from pure noise.</div>
-      <div class="card-tags">
-        <span class="tag" style="border-color:rgba(20,184,166,0.4);color:var(--teal);background:rgba(20,184,166,0.06);">generative</span>
-        <span class="tag" style="border-color:rgba(20,184,166,0.3);color:var(--muted);background:rgba(20,184,166,0.04);">latent space</span>
-        <span class="tag" style="border-color:rgba(20,184,166,0.3);color:var(--muted);background:rgba(20,184,166,0.04);">probabilistic</span>
-      </div>
-      <div class="card-footer">
-        <div class="card-stages">📍 8 stages</div>
-        <div class="card-cta" style="border-color:var(--teal);color:var(--teal);">Open →</div>
-      </div>
-    </div>
-  </a>
+<a class="card" href="bert_interactive.html" style="border-color:rgba(59,130,246,0.2);" onmouseover="this.style.borderColor='rgba(59,130,246,0.55)';this.style.boxShadow='0 0 24px rgba(59,130,246,0.12)'" onmouseout="this.style.borderColor='rgba(59,130,246,0.2)';this.style.boxShadow=''">
+  <div class="banner" style="background:linear-gradient(90deg,#3b82f6,#60a5fa);"></div>
+  <div class="body">
+    <div class="card-title" style="color:#60a5fa;">BERT</div>
+    <div class="card-desc">Bidirectional attention, MLM pretraining, NSP, contextual embeddings for every NLP task</div>
+    <div class="tags"><span class="tag" style="border-color:rgba(59,130,246,0.4);color:#60a5fa;">bidirectional</span><span class="tag" style="border-color:rgba(59,130,246,0.2);color:var(--muted);">pretraining</span></div>
+    <div class="footer-row"><span class="stages-txt">8 stages</span><span class="cta" style="border-color:#3b82f6;color:#60a5fa;">Open →</span></div>
+  </div>
+</a>
 
-  <!-- GAN -->
-  <a class="card" href="gan_interactive.html"
-     style="border-color:rgba(239,68,68,0.25);"
-     onmouseover="this.style.borderColor='rgba(239,68,68,0.6)';this.style.boxShadow='0 0 28px rgba(239,68,68,0.15)'"
-     onmouseout="this.style.borderColor='rgba(239,68,68,0.25)';this.style.boxShadow=''">
-    <div class="card-banner" style="background:linear-gradient(90deg,var(--red),var(--orange),var(--green));"></div>
-    <div class="card-body">
-      <div class="card-icon">⚔️</div>
-      <div class="card-title" style="color:var(--red);">GAN</div>
-      <div class="card-desc">Adversarial training. Generator vs Discriminator minimax game, Nash equilibrium, photorealistic image synthesis.</div>
-      <div class="card-tags">
-        <span class="tag" style="border-color:rgba(239,68,68,0.4);color:var(--red);background:rgba(239,68,68,0.06);">generative</span>
-        <span class="tag" style="border-color:rgba(239,68,68,0.3);color:var(--muted);background:rgba(239,68,68,0.04);">adversarial</span>
-        <span class="tag" style="border-color:rgba(239,68,68,0.3);color:var(--muted);background:rgba(239,68,68,0.04);">image synthesis</span>
-      </div>
-      <div class="card-footer">
-        <div class="card-stages">📍 8 stages</div>
-        <div class="card-cta" style="border-color:var(--red);color:var(--red);">Open →</div>
-      </div>
-    </div>
-  </a>
+<a class="card" href="gpt_interactive.html" style="border-color:rgba(34,197,94,0.2);" onmouseover="this.style.borderColor='rgba(34,197,94,0.55)';this.style.boxShadow='0 0 24px rgba(34,197,94,0.12)'" onmouseout="this.style.borderColor='rgba(34,197,94,0.2)';this.style.boxShadow=''">
+  <div class="banner" style="background:linear-gradient(90deg,#22c55e,#06b6d4);"></div>
+  <div class="body">
+    <div class="card-title" style="color:#22c55e;">GPT</div>
+    <div class="card-desc">Decoder-only, causal masking, KV cache, autoregressive generation — how ChatGPT works</div>
+    <div class="tags"><span class="tag" style="border-color:rgba(34,197,94,0.4);color:#22c55e;">decoder-only</span><span class="tag" style="border-color:rgba(34,197,94,0.2);color:var(--muted);">causal LM</span></div>
+    <div class="footer-row"><span class="stages-txt">8 stages</span><span class="cta" style="border-color:#22c55e;color:#22c55e;">Open →</span></div>
+  </div>
+</a>
 
-  <!-- DIFFUSION -->
-  <a class="card" href="diffusion_interactive.html"
-     style="border-color:rgba(139,92,246,0.25);"
-     onmouseover="this.style.borderColor='rgba(139,92,246,0.6)';this.style.boxShadow='0 0 28px rgba(139,92,246,0.15)'"
-     onmouseout="this.style.borderColor='rgba(139,92,246,0.25)';this.style.boxShadow=''">
-    <div class="card-banner" style="background:linear-gradient(90deg,#8b5cf6,var(--pink),var(--orange));"></div>
-    <div class="card-body">
-      <div class="card-icon">🎨</div>
-      <div class="card-title" style="color:#a78bfa;">Diffusion</div>
-      <div class="card-desc">DDPM / Stable Diffusion. Forward noise process, U-Net denoising, classifier-free guidance, VAE decode to pixels.</div>
-      <div class="card-tags">
-        <span class="tag" style="border-color:rgba(139,92,246,0.4);color:#a78bfa;background:rgba(139,92,246,0.06);">generative</span>
-        <span class="tag" style="border-color:rgba(139,92,246,0.3);color:var(--muted);background:rgba(139,92,246,0.04);">text-to-image</span>
-        <span class="tag" style="border-color:rgba(139,92,246,0.3);color:var(--muted);background:rgba(139,92,246,0.04);">SOTA</span>
-      </div>
-      <div class="card-footer">
-        <div class="card-stages">📍 7 stages</div>
-        <div class="card-cta" style="border-color:#8b5cf6;color:#a78bfa;">Open →</div>
-      </div>
-    </div>
-  </a>
+<a class="card" href="vit_interactive.html" style="border-color:rgba(59,130,246,0.2);" onmouseover="this.style.borderColor='rgba(59,130,246,0.55)';this.style.boxShadow='0 0 24px rgba(59,130,246,0.12)'" onmouseout="this.style.borderColor='rgba(59,130,246,0.2)';this.style.boxShadow=''">
+  <div class="banner" style="background:linear-gradient(90deg,#3b82f6,#06b6d4);"></div>
+  <div class="body">
+    <div class="card-title" style="color:#3b82f6;">ViT</div>
+    <div class="card-desc">Patch embeddings, [CLS] token, global attention on vision — no convolutions needed</div>
+    <div class="tags"><span class="tag" style="border-color:rgba(59,130,246,0.4);color:#3b82f6;">patches</span><span class="tag" style="border-color:rgba(59,130,246,0.2);color:var(--muted);">vision-transformer</span></div>
+    <div class="footer-row"><span class="stages-txt">7 stages</span><span class="cta" style="border-color:#3b82f6;color:#3b82f6;">Open →</span></div>
+  </div>
+</a>
 
-  <!-- CLIP -->
-  <a class="card" href="clip_interactive.html"
-     style="border-color:rgba(6,182,212,0.25);"
-     onmouseover="this.style.borderColor='rgba(6,182,212,0.6)';this.style.boxShadow='0 0 28px rgba(6,182,212,0.15)'"
-     onmouseout="this.style.borderColor='rgba(6,182,212,0.25)';this.style.boxShadow=''">
-    <div class="card-banner" style="background:linear-gradient(90deg,var(--cyan),var(--blue),var(--pink));"></div>
-    <div class="card-body">
-      <div class="card-icon">🔗</div>
-      <div class="card-title" style="color:var(--cyan);">CLIP</div>
-      <div class="card-desc">Contrastive Language-Image Pretraining. Dual encoders, similarity matrix, contrastive loss, zero-shot classification.</div>
-      <div class="card-tags">
-        <span class="tag" style="border-color:rgba(6,182,212,0.4);color:var(--cyan);background:rgba(6,182,212,0.06);">vision-language</span>
-        <span class="tag" style="border-color:rgba(6,182,212,0.3);color:var(--muted);background:rgba(6,182,212,0.04);">contrastive</span>
-        <span class="tag" style="border-color:rgba(6,182,212,0.3);color:var(--muted);background:rgba(6,182,212,0.04);">zero-shot</span>
-      </div>
-      <div class="card-footer">
-        <div class="card-stages">📍 7 stages</div>
-        <div class="card-cta" style="border-color:var(--cyan);color:var(--cyan);">Open →</div>
-      </div>
-    </div>
-  </a>
+</div>
 
-  <!-- MAMBA -->
-  <a class="card" href="mamba_interactive.html"
-     style="border-color:rgba(132,204,22,0.25);"
-     onmouseover="this.style.borderColor='rgba(132,204,22,0.6)';this.style.boxShadow='0 0 28px rgba(132,204,22,0.15)'"
-     onmouseout="this.style.borderColor='rgba(132,204,22,0.25)';this.style.boxShadow=''">
-    <div class="card-banner" style="background:linear-gradient(90deg,var(--lime),var(--green),var(--cyan));"></div>
-    <div class="card-body">
-      <div class="card-icon">🐍</div>
-      <div class="card-title" style="color:var(--lime);">Mamba / SSM</div>
-      <div class="card-desc">Selective State Space Model. Linear recurrence, parallel scan training, O(1) inference, Transformer alternative.</div>
-      <div class="card-tags">
-        <span class="tag" style="border-color:rgba(132,204,22,0.4);color:var(--lime);background:rgba(132,204,22,0.06);">sequence</span>
-        <span class="tag" style="border-color:rgba(132,204,22,0.3);color:var(--muted);background:rgba(132,204,22,0.04);">linear O(n)</span>
-        <span class="tag" style="border-color:rgba(132,204,22,0.3);color:var(--muted);background:rgba(132,204,22,0.04);">state space</span>
-      </div>
-      <div class="card-footer">
-        <div class="card-stages">📍 7 stages</div>
-        <div class="card-cta" style="border-color:var(--lime);color:var(--lime);">Open →</div>
-      </div>
-    </div>
-  </a>
+<div class="section-label">🎨 Generative Models</div>
+<div class="grid">
+
+<a class="card" href="vae_interactive.html" style="border-color:rgba(20,184,166,0.2);" onmouseover="this.style.borderColor='rgba(20,184,166,0.55)';this.style.boxShadow='0 0 24px rgba(20,184,166,0.12)'" onmouseout="this.style.borderColor='rgba(20,184,166,0.2)';this.style.boxShadow=''">
+  <div class="banner" style="background:linear-gradient(90deg,#14b8a6,#a855f7);"></div>
+  <div class="body">
+    <div class="card-title" style="color:#14b8a6;">VAE</div>
+    <div class="card-desc">Reparameterization trick, ELBO loss, continuous latent space, generation from noise</div>
+    <div class="tags"><span class="tag" style="border-color:rgba(20,184,166,0.4);color:#14b8a6;">latent space</span><span class="tag" style="border-color:rgba(20,184,166,0.2);color:var(--muted);">probabilistic</span></div>
+    <div class="footer-row"><span class="stages-txt">8 stages</span><span class="cta" style="border-color:#14b8a6;color:#14b8a6;">Open →</span></div>
+  </div>
+</a>
+
+<a class="card" href="gan_interactive.html" style="border-color:rgba(239,68,68,0.2);" onmouseover="this.style.borderColor='rgba(239,68,68,0.55)';this.style.boxShadow='0 0 24px rgba(239,68,68,0.12)'" onmouseout="this.style.borderColor='rgba(239,68,68,0.2)';this.style.boxShadow=''">
+  <div class="banner" style="background:linear-gradient(90deg,#ef4444,#f97316,#22c55e);"></div>
+  <div class="body">
+    <div class="card-title" style="color:#ef4444;">GAN</div>
+    <div class="card-desc">Generator vs Discriminator, minimax game, Nash equilibrium, photorealistic synthesis</div>
+    <div class="tags"><span class="tag" style="border-color:rgba(239,68,68,0.4);color:#ef4444;">adversarial</span><span class="tag" style="border-color:rgba(239,68,68,0.2);color:var(--muted);">image synthesis</span></div>
+    <div class="footer-row"><span class="stages-txt">8 stages</span><span class="cta" style="border-color:#ef4444;color:#ef4444;">Open →</span></div>
+  </div>
+</a>
+
+<a class="card" href="diffusion_interactive.html" style="border-color:rgba(139,92,246,0.2);" onmouseover="this.style.borderColor='rgba(139,92,246,0.55)';this.style.boxShadow='0 0 24px rgba(139,92,246,0.12)'" onmouseout="this.style.borderColor='rgba(139,92,246,0.2)';this.style.boxShadow=''">
+  <div class="banner" style="background:linear-gradient(90deg,#8b5cf6,#ec4899,#f97316);"></div>
+  <div class="body">
+    <div class="card-title" style="color:#a78bfa;">Diffusion</div>
+    <div class="card-desc">DDPM, U-Net denoising, classifier-free guidance, VAE decode — how Stable Diffusion works</div>
+    <div class="tags"><span class="tag" style="border-color:rgba(139,92,246,0.4);color:#a78bfa;">text-to-image</span><span class="tag" style="border-color:rgba(139,92,246,0.2);color:var(--muted);">SOTA</span></div>
+    <div class="footer-row"><span class="stages-txt">7 stages</span><span class="cta" style="border-color:#8b5cf6;color:#a78bfa;">Open →</span></div>
+  </div>
+</a>
+
+<a class="card" href="unet_interactive.html" style="border-color:rgba(20,184,166,0.2);" onmouseover="this.style.borderColor='rgba(20,184,166,0.55)';this.style.boxShadow='0 0 24px rgba(20,184,166,0.12)'" onmouseout="this.style.borderColor='rgba(20,184,166,0.2)';this.style.boxShadow=''">
+  <div class="banner" style="background:linear-gradient(90deg,#14b8a6,#3b82f6);"></div>
+  <div class="body">
+    <div class="card-title" style="color:#14b8a6;">U-Net</div>
+    <div class="card-desc">Encoder-decoder with skip connections, pixel-perfect segmentation, Diffusion backbone</div>
+    <div class="tags"><span class="tag" style="border-color:rgba(20,184,166,0.4);color:#14b8a6;">segmentation</span><span class="tag" style="border-color:rgba(20,184,166,0.2);color:var(--muted);">skip fuse</span></div>
+    <div class="footer-row"><span class="stages-txt">7 stages</span><span class="cta" style="border-color:#14b8a6;color:#14b8a6;">Open →</span></div>
+  </div>
+</a>
+
+</div>
+
+<div class="section-label">🔗 Vision-Language & Sequence</div>
+<div class="grid">
+
+<a class="card" href="clip_interactive.html" style="border-color:rgba(6,182,212,0.2);" onmouseover="this.style.borderColor='rgba(6,182,212,0.55)';this.style.boxShadow='0 0 24px rgba(6,182,212,0.12)'" onmouseout="this.style.borderColor='rgba(6,182,212,0.2)';this.style.boxShadow=''">
+  <div class="banner" style="background:linear-gradient(90deg,#06b6d4,#3b82f6,#ec4899);"></div>
+  <div class="body">
+    <div class="card-title" style="color:#06b6d4;">CLIP</div>
+    <div class="card-desc">Dual encoders, contrastive loss, zero-shot classification, powers DALL·E 2 and SD guidance</div>
+    <div class="tags"><span class="tag" style="border-color:rgba(6,182,212,0.4);color:#06b6d4;">contrastive</span><span class="tag" style="border-color:rgba(6,182,212,0.2);color:var(--muted);">zero-shot</span></div>
+    <div class="footer-row"><span class="stages-txt">7 stages</span><span class="cta" style="border-color:#06b6d4;color:#06b6d4;">Open →</span></div>
+  </div>
+</a>
+
+<a class="card" href="mamba_interactive.html" style="border-color:rgba(132,204,22,0.2);" onmouseover="this.style.borderColor='rgba(132,204,22,0.55)';this.style.boxShadow='0 0 24px rgba(132,204,22,0.12)'" onmouseout="this.style.borderColor='rgba(132,204,22,0.2)';this.style.boxShadow=''">
+  <div class="banner" style="background:linear-gradient(90deg,#84cc16,#22c55e,#06b6d4);"></div>
+  <div class="body">
+    <div class="card-title" style="color:#84cc16;">Mamba / SSM</div>
+    <div class="card-desc">Selective state space model, O(n) training, O(1) inference — the Transformer alternative</div>
+    <div class="tags"><span class="tag" style="border-color:rgba(132,204,22,0.4);color:#84cc16;">linear O(n)</span><span class="tag" style="border-color:rgba(132,204,22,0.2);color:var(--muted);">no KV cache</span></div>
+    <div class="footer-row"><span class="stages-txt">7 stages</span><span class="cta" style="border-color:#84cc16;color:#84cc16;">Open →</span></div>
+  </div>
+</a>
+
+<a class="card" href="moe_interactive.html" style="border-color:rgba(249,115,22,0.2);" onmouseover="this.style.borderColor='rgba(249,115,22,0.55)';this.style.boxShadow='0 0 24px rgba(249,115,22,0.12)'" onmouseout="this.style.borderColor='rgba(249,115,22,0.2)';this.style.boxShadow=''">
+  <div class="banner" style="background:linear-gradient(90deg,#f97316,#a855f7);"></div>
+  <div class="body">
+    <div class="card-title" style="color:#f97316;">MoE</div>
+    <div class="card-desc">Sparse gating, top-k expert routing, load balancing — how GPT-4 and Mixtral scale efficiently</div>
+    <div class="tags"><span class="tag" style="border-color:rgba(249,115,22,0.4);color:#f97316;">sparse</span><span class="tag" style="border-color:rgba(249,115,22,0.2);color:var(--muted);">scaling</span></div>
+    <div class="footer-row"><span class="stages-txt">7 stages</span><span class="cta" style="border-color:#f97316;color:#f97316;">Open →</span></div>
+  </div>
+</a>
+
+</div>
+
+<div class="section-label">🛠 Applied AI</div>
+<div class="grid">
+
+<a class="card" href="rag_interactive.html" style="border-color:rgba(236,72,153,0.2);" onmouseover="this.style.borderColor='rgba(236,72,153,0.55)';this.style.boxShadow='0 0 24px rgba(236,72,153,0.12)'" onmouseout="this.style.borderColor='rgba(236,72,153,0.2)';this.style.boxShadow=''">
+  <div class="banner" style="background:linear-gradient(90deg,#ec4899,#a855f7);"></div>
+  <div class="body">
+    <div class="card-title" style="color:#ec4899;">RAG</div>
+    <div class="card-desc">Query → embed → vector search → rerank → context inject → LLM generate → cite sources</div>
+    <div class="tags"><span class="tag" style="border-color:rgba(236,72,153,0.4);color:#ec4899;">retrieval</span><span class="tag" style="border-color:rgba(236,72,153,0.2);color:var(--muted);">grounded gen</span></div>
+    <div class="footer-row"><span class="stages-txt">8 stages</span><span class="cta" style="border-color:#ec4899;color:#ec4899;">Open →</span></div>
+  </div>
+</a>
+
+<a class="card" href="lora_interactive.html" style="border-color:rgba(234,179,8,0.2);" onmouseover="this.style.borderColor='rgba(234,179,8,0.55)';this.style.boxShadow='0 0 24px rgba(234,179,8,0.12)'" onmouseout="this.style.borderColor='rgba(234,179,8,0.2)';this.style.boxShadow=''">
+  <div class="banner" style="background:linear-gradient(90deg,#eab308,#f97316);"></div>
+  <div class="body">
+    <div class="card-title" style="color:#eab308;">LoRA / PEFT</div>
+    <div class="card-desc">Freeze base model, train low-rank adapters ΔW=BA, merge at inference — 0.1% of params</div>
+    <div class="tags"><span class="tag" style="border-color:rgba(234,179,8,0.4);color:#eab308;">fine-tuning</span><span class="tag" style="border-color:rgba(234,179,8,0.2);color:var(--muted);">PEFT</span></div>
+    <div class="footer-row"><span class="stages-txt">7 stages</span><span class="cta" style="border-color:#eab308;color:#eab308;">Open →</span></div>
+  </div>
+</a>
 
 </div>
 
 <footer>
-  Deep Learning Architecture Library · 8 Architectures · CNN · Transformer · BERT · VAE · GAN · Diffusion · CLIP · Mamba<br>
-  <span style="margin-top:5px;display:block;">All diagrams are self-contained HTML — no dependencies, no server required.</span>
+  Deep Learning Architecture Library · 15 Diagrams · All self-contained HTML · No server required<br>
+  <span style="margin-top:5px;display:block;color:rgba(100,116,139,0.6);">CNN · ResNet · Transformer · BERT · GPT · ViT · VAE · GAN · Diffusion · U-Net · CLIP · Mamba · MoE · RAG · LoRA</span>
 </footer>
-
 </body>
 </html>

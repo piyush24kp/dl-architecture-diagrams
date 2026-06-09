@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ViT — Vision Transformer</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap');
+:root{--bg:#0b0f1a;--bg2:#111827;--line:#1e293b;--muted:#475569;--text:#e2e8f0;--dim:#94a3b8;--blue:#3b82f6;--blue2:#60a5fa;--cyan:#06b6d4;--green:#22c55e;--orange:#f97316;--purple:#a855f7;--pink:#ec4899;--a1:#3b82f6;--a2:#60a5fa;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden;}
+header{text-align:center;padding:24px 20px 12px;position:relative;}
+header::after{content:'';display:block;height:1px;background:linear-gradient(90deg,transparent,var(--a1),var(--a2),transparent);margin-top:14px;opacity:0.5;}
+.nav-back{position:absolute;top:20px;left:20px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);text-decoration:none;border:1px solid var(--line);border-radius:4px;padding:4px 10px;}
+.nav-back:hover{color:var(--a1);}
+.title{font-family:'Bebas Neue',sans-serif;font-size:clamp(24px,4vw,46px);letter-spacing:4px;background:linear-gradient(135deg,var(--a1),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.subtitle{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);margin-top:4px;letter-spacing:2px;text-transform:uppercase;}
+.progress-wrap{position:sticky;top:0;z-index:100;background:var(--bg);border-bottom:1px solid var(--line);}
+.progress-track{height:3px;background:var(--line);}.progress-fill{height:100%;background:linear-gradient(90deg,var(--a1),var(--cyan));width:0%;transition:width 0.4s;}
+.pipeline{display:flex;flex-direction:column;padding:10px 24px 110px;max-width:1150px;margin:0 auto;}
+.stage{display:grid;grid-template-columns:130px 1fr 250px;gap:0 16px;align-items:center;padding:8px 0;transition:opacity 0.3s;position:relative;}
+.stage-label{text-align:right;padding-right:14px;}
+.stage-num{font-family:'Bebas Neue',sans-serif;font-size:28px;line-height:1;color:var(--muted);transition:color 0.3s;}
+.stage.active .stage-num{color:var(--a1);text-shadow:0 0 10px var(--a1);}.stage.done .stage-num{color:var(--green);}
+.stage-name{font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);}
+.stage.active .stage-name{color:var(--a2);}
+.sc{background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:12px 16px;transition:border-color 0.3s,box-shadow 0.3s;min-height:82px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;position:relative;overflow:hidden;}
+.stage.active .sc{border-color:rgba(59,130,246,0.45);box-shadow:0 0 22px rgba(59,130,246,0.1);}
+.stage.done .sc{border-color:rgba(34,197,94,0.2);}
+.stage.active .sc::before{content:'';position:absolute;top:-100%;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--a1),var(--cyan),transparent);animation:scan 1.8s linear infinite;}
+@keyframes scan{to{top:200%;}}
+.sn{font-size:11px;line-height:1.55;color:var(--dim);}.sn b{color:var(--text);}
+.eq{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a1);background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);padding:2px 8px;border-radius:3px;display:inline-block;margin-top:3px;}
+.conn{display:flex;height:18px;grid-column:1/-1;}.conn-line{width:2px;height:100%;background:var(--line);margin-left:96px;position:relative;overflow:hidden;}
+.cp{position:absolute;top:-20px;left:-3px;width:8px;height:20px;background:linear-gradient(to bottom,transparent,var(--a1),var(--cyan));border-radius:4px;opacity:0;}
+.cp.go{animation:fd 0.6s ease-in forwards;}@keyframes fd{0%{top:-20px;opacity:1;}100%{top:100%;opacity:0;}}
+.done-check{position:absolute;top:8px;right:10px;font-size:13px;opacity:0;transition:opacity 0.4s;}.stage.done .done-check{opacity:1;}
+.result-box{margin:0 24px 110px;max-width:1102px;margin-left:auto;margin-right:auto;border:1px solid rgba(34,197,94,0.3);background:rgba(34,197,94,0.05);border-radius:8px;padding:14px 18px;display:none;}
+.result-box.show{display:flex;gap:14px;align-items:center;flex-wrap:wrap;animation:fi 0.5s ease;}
+@keyframes fi{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+.dock{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:9999;display:flex;align-items:center;gap:10px;padding:9px 16px;background:rgba(10,15,30,0.93);backdrop-filter:blur(16px);border:1px solid rgba(59,130,246,0.35);border-radius:50px;box-shadow:0 8px 40px rgba(0,0,0,0.5);white-space:nowrap;}
+.db{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.8px;padding:6px 14px;border-radius:30px;border:1px solid;cursor:pointer;transition:all 0.18s;text-transform:uppercase;user-select:none;}
+.db:active{transform:scale(0.95);}
+.db-n{background:var(--a1);border-color:var(--a2);color:#fff;font-weight:700;}
+.db-n:hover{opacity:0.85;}
+.db-n:disabled{background:#1e293b;border-color:#334155;color:#475569;cursor:not-allowed;}
+.db-a{background:transparent;border-color:var(--purple);color:var(--purple);}
+.db-r{background:transparent;border-color:#334155;color:var(--muted);}
+.db-r:hover{border-color:var(--cyan);color:var(--cyan);}
+.dsep{width:1px;height:20px;background:#1e293b;flex-shrink:0;}
+.dbadge{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a1);background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.25);padding:4px 10px;border-radius:20px;min-width:140px;text-align:center;}
+.dspeed{display:flex;align-items:center;gap:5px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);}
+.dspeed input{width:60px;accent-color:var(--a1);cursor:pointer;}
+.cursor{display:inline-block;animation:blink 1s step-end infinite;}@keyframes blink{50%{opacity:0;}}
+</style>
+</head>
+<body>
+<header>
+  <a class="nav-back" href="index.html">← All Diagrams</a>
+  <div class="title">ViT — Vision Transformer</div>
+  <div class="subtitle">Image Patches as Tokens · No Convolutions · Attention on Vision</div>
+</header>
+<div class="progress-wrap"><div class="progress-track"><div class="progress-fill" id="pf"></div></div></div>
+<div class="pipeline" id="pipeline">
+
+<div class="stage" id="stage-0">
+  <div class="stage-label"><div class="stage-num">01</div><div class="stage-name">Input Image</div></div>
+  <div class="sc">
+    <canvas id="inputCvs" width="80" height="80" style="border-radius:4px;border:1px solid var(--line);"></canvas>
+    <div class="sn"><b>224×224×3 image</b><br>Any standard image<br>Split into fixed patches next<br><span class="eq">H×W×C → patches</span></div>
+    <div class="done-check">✅</div>
+  </div>
+  <div class="sn" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">ViT needs<br>large datasets<br>vs CNN (less<br>inductive bias)</span></div>
+</div>
+<div class="conn"><div class="conn-line"><div class="cp" id="cp0"></div></div></div>
+
+<div class="stage" id="stage-1">
+  <div class="stage-label"><div class="stage-num">02</div><div class="stage-name">Patch Split</div></div>
+  <div class="sc">
+    <div id="patchViz" style="display:flex;gap:10px;align-items:center;"></div>
+    <div class="sn"><b>224×224 → 196 patches</b><br>Each patch = 16×16×3 pixels<br>196 = (224/16)² patches<br><span class="eq">N = (H/P)² patches, P=16</span></div>
+    <div class="done-check">✅</div>
+  </div>
+  <div class="sn" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">Patch size P<br>trades off:<br>larger P →<br>fewer tokens</span></div>
+</div>
+<div class="conn"><div class="conn-line"><div class="cp" id="cp1"></div></div></div>
+
+<div class="stage" id="stage-2">
+  <div class="stage-label"><div class="stage-num">03</div><div class="stage-name">Patch Embeddings</div></div>
+  <div class="sc">
+    <div id="embedViz" style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;"></div>
+    <div class="sn"><b>Linear projection</b><br>16×16×3 = 768 → d_model<br>Each patch = one token<br><span class="eq">x_i = E · flatten(patch_i)</span></div>
+    <div class="done-check">✅</div>
+  </div>
+  <div class="sn" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">E ∈ R^(768×d)<br>Learned linear<br>projection,<br>no convolution</span></div>
+</div>
+<div class="conn"><div class="conn-line"><div class="cp" id="cp2"></div></div></div>
+
+<div class="stage" id="stage-3">
+  <div class="stage-label"><div class="stage-num">04</div><div class="stage-name">[CLS] + Pos Embed</div></div>
+  <div class="sc">
+    <div id="clsViz" style="display:flex;gap:5px;align-items:flex-end;flex-wrap:wrap;"></div>
+    <div class="sn"><b>Prepend [CLS] token</b><br>Learns global image repr<br>1D learnable position embeds<br><span class="eq">z = [x_cls; x_1+p_1; ...; x_N+p_N]</span></div>
+    <div class="done-check">✅</div>
+  </div>
+  <div class="sn" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">Borrowed from<br>BERT! [CLS]<br>aggregates all<br>patch info</span></div>
+</div>
+<div class="conn"><div class="conn-line"><div class="cp" id="cp3"></div></div></div>
+
+<div class="stage" id="stage-4">
+  <div class="stage-label"><div class="stage-num">05</div><div class="stage-name">Transformer Encoder ×L</div></div>
+  <div class="sc">
+    <div id="encViz" style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;"></div>
+    <div class="sn"><b>Standard encoder blocks</b><br>Full bidirectional attention<br>All patches attend to all patches<br><span class="eq">ViT-B/16: L=12, d=768, heads=12</span></div>
+    <div class="done-check">✅</div>
+  </div>
+  <div class="sn" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">ViT-L: 24 layers<br>ViT-H: 32 layers<br>Exactly same<br>as BERT blocks</span></div>
+</div>
+<div class="conn"><div class="conn-line"><div class="cp" id="cp4"></div></div></div>
+
+<div class="stage" id="stage-5">
+  <div class="stage-label"><div class="stage-num">06</div><div class="stage-name">Attention Map</div></div>
+  <div class="sc">
+    <div><div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:4px;">[CLS] attends to relevant patches:</div>
+    <canvas id="attnMap" width="110" height="80" style="border-radius:3px;border:1px solid rgba(59,130,246,0.3);"></canvas></div>
+    <div class="sn"><b>Patches attend globally</b><br>No local receptive field limit<br>Patch 50 can attend to patch 180<br><span class="eq">Attention = softmax(QKᵀ/√d_k)</span></div>
+    <div class="done-check">✅</div>
+  </div>
+  <div class="sn" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">Unlike CNN:<br>global context<br>from layer 1,<br>not just local</span></div>
+</div>
+<div class="conn"><div class="conn-line"><div class="cp" id="cp5"></div></div></div>
+
+<div class="stage" id="stage-6">
+  <div class="stage-label"><div class="stage-num">07</div><div class="stage-name">MLP Head</div></div>
+  <div class="sc">
+    <div id="mlpViz" style="display:flex;gap:5px;align-items:flex-end;height:65px;"></div>
+    <div class="sn"><b>[CLS] → classifier</b><br>Take [CLS] output only<br>Linear → class probabilities<br><span class="eq">y = MLP(LN(z_cls))</span></div>
+    <div class="done-check">✅</div>
+  </div>
+  <div class="sn" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">ViT-H/14 on<br>JFT-300M:<br>88.5% top-1<br>ImageNet</span></div>
+</div>
+
+</div>
+
+<div class="result-box" id="resultBox">
+  <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;color:var(--green);">✅ ViT Forward Pass Complete</div>
+  <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text);">196 patches × 768d → [CLS] → 88.5% ImageNet top-1</div>
+  <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--a1);background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);padding:3px 10px;border-radius:4px;">No convolutions · Global attention · Scales with data</div>
+</div>
+
+<div class="dock">
+  <button class="db db-n" id="btnRun">▶ Next Step</button>
+  <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#334155;border:1px solid #1e293b;border-radius:3px;padding:1px 5px;">Space</span>
+  <div class="dsep"></div><button class="db db-a" id="btnAuto">⚡ Auto</button>
+  <div class="dsep"></div><div class="dbadge" id="stepIndicator">Ready<span class="cursor">_</span></div>
+  <div class="dsep"></div>
+  <div class="dspeed"><span>Speed</span><input type="range" id="speedSlider" min="0.5" max="3" step="0.5" value="1"><span id="speedLabel">1×</span></div>
+  <div class="dsep"></div><button class="db db-r" id="btnReset">↺</button>
+</div>
+
+<script>
+let currentStage=-1,isRunning=false,speed=1;const TOTAL=7;
+document.getElementById('speedSlider').addEventListener('input',e=>{speed=parseFloat(e.target.value);document.getElementById('speedLabel').textContent=speed+'×';});
+function delay(ms){return new Promise(r=>setTimeout(r,ms/speed));}
+function scrollToStage(idx){const el=document.getElementById('stage-'+idx);if(!el)return;window.scrollTo({top:Math.max(0,window.pageYOffset+el.getBoundingClientRect().top-window.innerHeight/2+el.offsetHeight/2),behavior:'smooth'});}
+function syncBtn(){const b=document.getElementById('btnRun');if(currentStage>=TOTAL-1){b.textContent='↺ Restart';b.disabled=false;}else{b.innerHTML='▶ Next Step';b.disabled=isRunning;}}
+function setIndicator(html){document.getElementById('stepIndicator').innerHTML=html+'<span class="cursor">_</span>';}
+function fillProgress(){document.getElementById('pf').style.width=((currentStage+1)/TOTAL*100)+'%';}
+function pulse(id){const e=document.getElementById(id);if(e){e.classList.add('go');setTimeout(()=>e.classList.remove('go'),700);}}
+async function runStage(idx){
+  document.querySelectorAll('.stage').forEach((s,i)=>{
+    if(i===idx)s.style.opacity='1';
+    else if(s.classList.contains('done'))s.style.opacity='0.75';
+    else s.style.opacity='0.4';
+  });
+  const el=document.getElementById('stage-'+idx);
+  el.classList.add('active');
+  setIndicator('<span style="color:var(--a1);">Stage '+(idx+1)+'/7</span>');
+  fillProgress();
+  if(idx===0)await s0();else if(idx===1)await s1();else if(idx===2)await s2();else if(idx===3)await s3();else if(idx===4)await s4();else if(idx===5)await s5();else if(idx===6)await s6();
+  el.classList.remove('active');el.classList.add('done');el.style.opacity='0.75';
+  pulse('cp'+idx);
+}
+function drawImg(canvas){
+  const c=canvas.getContext('2d'),w=canvas.width,h=canvas.height;
+  c.fillStyle='#0b1020';c.fillRect(0,0,w,h);
+  const g=c.createRadialGradient(w*0.5,h*0.45,3,w*0.5,h*0.45,w*0.32);
+  g.addColorStop(0,'#fbbf24');g.addColorStop(1,'#f59e0b');
+  c.fillStyle=g;c.beginPath();c.arc(w*0.5,h*0.45,w*0.3,0,Math.PI*2);c.fill();
+  c.fillStyle='#1e293b';c.beginPath();c.arc(w*0.38,h*0.40,w*0.06,0,Math.PI*2);c.fill();
+  c.beginPath();c.arc(w*0.62,h*0.40,w*0.06,0,Math.PI*2);c.fill();
+}
+async function s0(){drawImg(document.getElementById('inputCvs'));await delay(500);}
+async function s1(){
+  const v=document.getElementById('patchViz');v.innerHTML='';
+  const imgWrap=document.createElement('div');imgWrap.style.cssText='position:relative;opacity:0;transition:opacity 0.4s;';
+  const cv=document.createElement('canvas');cv.width=72;cv.height=72;cv.style.cssText='border-radius:3px;';drawImg(cv);
+  // Grid overlay
+  const overlay=document.createElement('canvas');overlay.width=72;overlay.height=72;overlay.style.cssText='position:absolute;top:0;left:0;';
+  const oc=overlay.getContext('2d');oc.strokeStyle='rgba(59,130,246,0.6)';oc.lineWidth=1;
+  for(let i=1;i<5;i++){oc.beginPath();oc.moveTo(i*18,0);oc.lineTo(i*18,72);oc.stroke();oc.beginPath();oc.moveTo(0,i*18);oc.lineTo(72,i*18);oc.stroke();}
+  imgWrap.appendChild(cv);imgWrap.appendChild(overlay);v.appendChild(imgWrap);
+  await delay(200);imgWrap.style.opacity='1';
+  const arr=document.createElement('span');arr.style.cssText='font-size:20px;color:var(--muted);align-self:center;margin:0 5px;';arr.textContent='→';v.appendChild(arr);
+  const info=document.createElement('div');info.style.cssText='opacity:0;transition:opacity 0.4s;';
+  info.innerHTML='<div style="font-family:\'JetBrains Mono\',monospace;font-size:10px;color:var(--a1);">196 patches</div><div style="font-family:\'JetBrains Mono\',monospace;font-size:9px;color:var(--muted);">each 16×16×3</div><div style="font-family:\'JetBrains Mono\',monospace;font-size:9px;color:var(--muted);">= 768 values</div>';
+  v.appendChild(info);await delay(300);info.style.opacity='1';
+  await delay(300);
+}
+async function s2(){
+  const ev=document.getElementById('embedViz');ev.innerHTML='';
+  const cols=['#3b82f6','#06b6d4','#a855f7','#22c55e','#f97316','#ec4899'];
+  for(let i=0;i<6;i++){
+    const w=document.createElement('div');w.style.cssText='display:flex;flex-direction:column;gap:1.5px;align-items:center;opacity:0;transition:opacity 0.3s;';
+    const bars=document.createElement('div');bars.style.cssText='display:flex;gap:1.5px;align-items:flex-end;';
+    for(let j=0;j<5;j++){const b=document.createElement('div');b.style.cssText='width:10px;border-radius:1px 1px 0 0;background:'+cols[i]+';opacity:'+(0.3+Math.random()*0.7)+';';b.style.height=(4+Math.random()*20)+'px';bars.appendChild(b);}
+    const lbl=document.createElement('div');lbl.style.cssText='font-family:"JetBrains Mono",monospace;font-size:8px;color:var(--muted);margin-top:2px;';lbl.textContent='P'+(i+1);
+    w.appendChild(bars);w.appendChild(lbl);ev.appendChild(w);
+    if(i<5){const d=document.createElement('span');d.style.cssText='color:var(--muted);font-size:9px;align-self:center;';d.textContent='···';ev.appendChild(d);}
+    await delay(120);w.style.opacity='1';
+  }
+  const note=document.createElement('div');note.style.cssText='font-family:"JetBrains Mono",monospace;font-size:9px;color:var(--muted);align-self:center;margin-left:5px;opacity:0;transition:opacity 0.4s;';note.textContent='×196';ev.appendChild(note);
+  await delay(200);note.style.opacity='1';
+  await delay(300);
+}
+async function s3(){
+  const cv=document.getElementById('clsViz');cv.innerHTML='';
+  const cls=document.createElement('div');cls.style.cssText='border:2px solid var(--purple);border-radius:4px;padding:5px 10px;font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--purple);background:rgba(168,85,247,0.1);opacity:0;transition:opacity 0.4s;text-align:center;';
+  cls.innerHTML='[CLS]<br><span style="font-size:8px;color:var(--muted);">learned</span>';
+  cv.appendChild(cls);await delay(250);cls.style.opacity='1';
+  const arr=document.createElement('span');arr.style.cssText='font-size:16px;color:var(--muted);align-self:center;margin:0 6px;';arr.textContent='+';cv.appendChild(arr);
+  const cols=['#3b82f6','#06b6d4','#a855f7'];
+  for(let i=0;i<3;i++){
+    const w=document.createElement('div');w.style.cssText='display:flex;flex-direction:column;align-items:center;gap:2px;opacity:0;transition:opacity 0.3s;';
+    const bar=document.createElement('div');bar.style.cssText='width:20px;border-radius:2px;background:'+cols[i]+';opacity:0.7;';bar.style.height=(8+Math.random()*16)+'px';
+    const lbl=document.createElement('div');lbl.style.cssText='font-family:"JetBrains Mono",monospace;font-size:8px;color:var(--muted);';lbl.textContent='P'+(i+1)+'+pos';
+    w.appendChild(bar);w.appendChild(lbl);cv.appendChild(w);
+    await delay(100);w.style.opacity='1';
+  }
+  const d=document.createElement('span');d.style.cssText='color:var(--muted);font-size:9px;align-self:center;';d.textContent='···197 total';cv.appendChild(d);
+  await delay(300);
+}
+async function s4(){
+  const ev=document.getElementById('encViz');ev.innerHTML='';
+  for(let i=1;i<=12;i++){
+    const d=document.createElement('div');d.style.cssText='border:1px solid rgba(59,130,246,0.4);border-radius:4px;padding:4px 7px;font-family:"JetBrains Mono",monospace;font-size:9px;color:var(--a1);background:rgba(59,130,246,0.08);opacity:0;transition:all 0.2s;text-align:center;';d.textContent='L'+i;ev.appendChild(d);
+    if(i<12){const a=document.createElement('span');a.style.cssText='color:var(--muted);font-size:11px;align-self:center;';a.textContent='→';ev.appendChild(a);}
+    await delay(80);d.style.opacity='1';if(i===12){d.style.background='rgba(59,130,246,0.3)';d.style.color='#fff';}
+  }
+  await delay(200);
+}
+async function s5(){
+  const am=document.getElementById('attnMap');const c=am.getContext('2d');
+  const w=am.width,h=am.height;c.fillStyle='#0b0f1a';c.fillRect(0,0,w,h);
+  const cols=7,rows=5,cw=w/cols,rh=h/rows;
+  // Simulate attention: center patches have higher score (face area)
+  for(let r=0;r<rows;r++){for(let cl=0;cl<cols;cl++){
+    const cx=cl*cw+cw/2,cy=r*rh+rh/2;
+    const distFromCenter=Math.sqrt(Math.pow((cx-w/2)/(w/2),2)+Math.pow((cy-h*0.4)/(h*0.4),2));
+    const alpha=Math.max(0.05,0.9-distFromCenter*0.7);
+    c.fillStyle=`rgba(59,130,246,${alpha})`;
+    c.fillRect(cl*cw+1,r*rh+1,cw-2,rh-2);
+    await delay(20);
+  }}
+  await delay(300);
+}
+async function s6(){
+  const mv=document.getElementById('mlpViz');mv.innerHTML='';
+  const classes=['cat','dog','bird','fox','wolf'];const probs=[0.82,0.08,0.05,0.03,0.02];
+  const cols=['#22c55e','#3b82f6','#a855f7','#06b6d4','#f97316'];
+  for(let i=0;i<5;i++){
+    const w=document.createElement('div');w.style.cssText='display:flex;flex-direction:column;align-items:center;gap:2px;';
+    const val=document.createElement('div');val.style.cssText='font-family:"JetBrains Mono",monospace;font-size:8px;color:'+cols[i]+';height:14px;';val.textContent='';
+    const bar=document.createElement('div');bar.style.cssText='width:28px;height:2px;border-radius:2px 2px 0 0;background:'+cols[i]+';transition:height 0.6s cubic-bezier(0.34,1.56,0.64,1);';
+    const lbl=document.createElement('div');lbl.style.cssText='font-family:"JetBrains Mono",monospace;font-size:8px;color:var(--muted);';lbl.textContent=classes[i];
+    w.appendChild(val);w.appendChild(bar);w.appendChild(lbl);mv.appendChild(w);
+    await delay(100);bar.style.height=(probs[i]*60)+'px';val.textContent=Math.round(probs[i]*100)+'%';
+    if(i===0)bar.style.boxShadow='0 0 10px #22c55e';
+  }
+  await delay(400);document.getElementById('resultBox').classList.add('show');
+  setIndicator('<span style="color:var(--green);">✅ Complete!</span>');
+}
+document.getElementById('btnRun').addEventListener('click',()=>{if(currentStage>=TOTAL-1){resetAll();return;}if(isRunning)return;isRunning=true;syncBtn();currentStage++;scrollToStage(currentStage);runStage(currentStage).then(()=>{isRunning=false;syncBtn();});});
+document.getElementById('btnAuto').addEventListener('click',async()=>{if(isRunning)return;if(currentStage>=TOTAL-1){resetAll();await delay(300);}isRunning=true;syncBtn();while(currentStage<TOTAL-1){currentStage++;scrollToStage(currentStage);await runStage(currentStage);await delay(350);}isRunning=false;syncBtn();});
+document.getElementById('btnReset').addEventListener('click',resetAll);
+document.addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;if(e.code==='Space'||e.code==='ArrowRight'){e.preventDefault();document.getElementById('btnRun').click();}if(e.code==='KeyR'){e.preventDefault();resetAll();}if(e.code==='KeyA'){e.preventDefault();document.getElementById('btnAuto').click();}});
+function resetAll(){isRunning=false;currentStage=-1;syncBtn();document.querySelectorAll('.stage').forEach((s,i)=>{s.classList.remove('active','done');s.style.opacity=i===0?'1':'0.4';});document.getElementById('pf').style.width='0%';setIndicator('Ready');document.getElementById('resultBox').classList.remove('show');['patchViz','embedViz','clsViz','encViz','mlpViz'].forEach(id=>{const e=document.getElementById(id);if(e)e.innerHTML='';});const am=document.getElementById('attnMap');if(am)am.getContext('2d').clearRect(0,0,110,80);}
+(function initOpacity(){document.querySelectorAll('.stage').forEach((s,i)=>{s.style.opacity=i===0?'1':'0.4';});})();
+syncBtn();
+</script>
+</body>
+</html>
