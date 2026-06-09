@@ -254,13 +254,13 @@ header::after{content:'';display:block;height:1px;background:linear-gradient(90d
   <div class="dsep"></div>
   <div class="dbadge" id="stepIndicator">Ready<span class="cursor">_</span></div>
   <div class="dsep"></div>
-  <div class="dspeed"><span>Speed</span><input type="range" id="speedSlider" min="0.5" max="3" step="0.5" value="1"><span id="speedLabel">1×</span></div>
+  <div class="dspeed"><span>Speed</span><input type="range" id="speedSlider" min="0.5" max="3" step="0.5" value="0.5"><span id="speedLabel">0.5×</span></div>
   <div class="dsep"></div>
   <button class="db db-rst" id="btnReset">↺</button>
 </div>
 
 <script>
-let currentStage=-1,isRunning=false,speed=1;
+let currentStage=-1,isRunning=false,speed=0.5;
 const TOTAL=9;
 document.getElementById('speedSlider').addEventListener('input',e=>{speed=parseFloat(e.target.value);document.getElementById('speedLabel').textContent=speed+'×';});
 function delay(ms){return new Promise(r=>setTimeout(r,ms/speed));}
