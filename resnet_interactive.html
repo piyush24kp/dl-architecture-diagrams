@@ -81,7 +81,14 @@ header::after{content:'';display:block;height:1px;background:linear-gradient(90d
   <div class="stage-label"><div class="stage-num">03</div><div class="stage-name">Residual Block</div></div>
   <div class="sc"><div id="resblockViz" style="display:flex;gap:6px;align-items:stretch;min-width:320px;"></div>
     <div class="sn"><b>The key innovation!</b><br>F(x) + x skip connection<br>Gradients flow directly back<br><span class="eq">H(x) = F(x) + x</span></div><div class="done-check">✅</div></div>
-  <div class="sn" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">Without skip:<br>152-layer net<br>degraded!<br>With: improves</span></div>
+  <div class="sn" style="padding:4px 0;"><div style="font-family:'JetBrains Mono',monospace;font-size:9px;line-height:1.6;">
+  <div style="color:var(--red,#ef4444);">Plain net:</div>
+  <div style="color:var(--muted);">x→F(x)→out</div>
+  <div style="color:var(--muted);">56-layer worse<br>than 20-layer!</div>
+  <div style="color:var(--a1);margin-top:3px;">ResNet:</div>
+  <div style="color:var(--muted);">x→F(x)+x→out</div>
+  <div style="color:var(--green);">152-layer ✅</div>
+</div></div>
 </div><div class="conn"><div class="conn-line"><div class="cp" id="cp2"></div></div></div>
 <div class="stage" id="stage-3">
   <div class="stage-label"><div class="stage-num">04</div><div class="stage-name">Bottleneck Block</div></div>

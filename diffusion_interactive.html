@@ -75,9 +75,9 @@ header::after{content:'';display:block;height:1px;background:linear-gradient(90d
 <div class="sc">
   <div><div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:5px;">Sample from N(0,I) — pure noise:</div>
   <canvas id="noiseCanvas" width="80" height="80" style="border-radius:4px;border:1px solid rgba(139,92,246,0.3);"></canvas></div>
-  <div class="sn2"><b>Starting point: random noise</b><br>64×64×4 latent tensor<br>Will be denoised step by step<br><span class="eq">x_T ~ N(0, I)</span></div>
+  <div class="sn2"><b>Starting point: pure noise z_T</b><br>Forward: x₀ → add β_t noise × T → z_T<br>We reverse this during inference<br><span class="eq">z_T ~ N(0,I)  [training: q(z_t|z_0)]</span></div>
   <div class="done-check">✅</div>
-</div><div class="sn2" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">Latent space<br>64×64×4<br>NOT pixels!<br>8× compressed</span></div></div>
+</div><div class="sn2" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">Forward process:<br>🖼️ image → +noise<br>→ +noise → ❄️ z_T<br>← we reverse this</span></div></div>
 <div class="conn"><div class="conn-line"><div class="conn-pulse" id="cp1"></div></div></div>
 
 <div class="stage" id="stage-2"><div class="stage-label"><div class="stage-num">03</div><div class="stage-name">Timestep t</div></div>

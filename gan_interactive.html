@@ -115,7 +115,7 @@ header::after{content:'';display:block;height:1px;background:linear-gradient(90d
         <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--green);margin-top:3px;">x ~ p_data — REAL</div>
       </div>
     </div>
-    <div class="sn2"><b>Both fed to D</b><br>Real from dataset<br>Fake from generator<br><span class="eq">Labels: real=1, fake=0</span></div>
+    <div class="sn2"><b>Competition: both feed D</b><br>Real x∼p_data → D label=1<br>Fake G(z) → D label=0<br><span class="eq">D trained on both simultaneously</span></div>
     <div class="done-check">✅</div>
   </div>
   <div class="sn2" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">Mixed in<br>each batch<br>D doesn't know<br>which is which</span></div>

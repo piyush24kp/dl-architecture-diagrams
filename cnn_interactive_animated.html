@@ -602,7 +602,15 @@ header::after {
     </div>
     <div class="stage-note" style="padding:4px 0;">
       <b style="color:var(--dim);">Params</b><br>
-      <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">32×(3×3×3+1)<br>= 896 params<br>BN: 2×32=64</span>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:9px;line-height:1.7;">
+  <div style="color:var(--cyan);">📐 Dimension flow:</div>
+  <div style="color:var(--dim);">32×32×3</div>
+  <div style="color:var(--muted);">↓ Conv 3×3×32</div>
+  <div style="color:var(--cyan);">30×30×32</div>
+  <div style="color:var(--muted);">↓ MaxPool 2×2</div>
+  <div style="color:var(--blue2);">15×15×32</div>
+  <div style="color:var(--muted);margin-top:2px;">Params: 896+64</div>
+</div>
     </div>
   </div>
   <div class="connector"><div class="connector-line"><div class="connector-pulse" id="cp1"></div></div></div>
