@@ -595,14 +595,14 @@ header::after {
       <div class="stage-note">
         <b>Learned filters</b> slide over input<br>
         Each filter detects: edges, curves<br>
-        Stride=1, No padding<br>
-        <span class="eq">output = Σ(filter ⊛ patch) + b</span>
+        Conv→<b>BatchNorm</b>→ReLU (modern CNNs)<br>
+        <span class="eq">32×32×3 → 30×30×32 (no pad, s=1)</span>
       </div>
       <div class="done-check">✅</div>
     </div>
     <div class="stage-note" style="padding:4px 0;">
       <b style="color:var(--dim);">Params</b><br>
-      <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">32×(3×3×3+1)<br>= 896 params</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">32×(3×3×3+1)<br>= 896 params<br>BN: 2×32=64</span>
     </div>
   </div>
   <div class="connector"><div class="connector-line"><div class="connector-pulse" id="cp1"></div></div></div>
@@ -675,7 +675,7 @@ header::after {
     </div>
     <div class="stage-note" style="padding:4px 0;">
       <b style="color:var(--dim);">Result</b><br>
-      <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">30×30 → 15×15<br>per feature map</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">30×30×32 → 15×15×32<br>Dimensions halved<br>Channels preserved</span>
     </div>
   </div>
   <div class="connector"><div class="connector-line"><div class="connector-pulse" id="cp3"></div></div></div>

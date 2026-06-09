@@ -139,7 +139,7 @@ header::after{content:'';display:block;height:1px;background:linear-gradient(90d
   <div class="stage-label"><div class="stage-num">07</div><div class="stage-name">Sampling</div></div>
   <div class="sc">
     <div id="samplingViz" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
-    <div class="sn"><b>Pick next token</b><br>Greedy / Top-k / Top-p (nucleus)<br>Sample → feed back in → repeat<br><span class="eq">Autoregressive until &lt;EOS&gt;</span></div>
+    <div class="sn"><b>Pick next token</b><br>Top-p=0.9 default · T=0.7 typical<br>Top-k: truncate · Temp: rescale logits<br><span class="eq">logits/T → softmax → top-p sample</span></div>
     <div class="done-check">✅</div>
   </div>
   <div class="sn" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">Top-p=0.9<br>Temperature=0.7<br>typical for<br>creative tasks</span></div>
@@ -273,10 +273,10 @@ async function s5(){
 async function s6(){
   const sv=document.getElementById('samplingViz');sv.innerHTML='';
   const strategies=[
-    {name:'Greedy',desc:'argmax → "mat"',active:false,c:'rgba(100,116,139'},
-    {name:'Top-k (k=40)',desc:'sample from top-40',active:false,c:'rgba(59,130,246'},
-    {name:'Top-p=0.9',desc:'nucleus sampling',active:true,c:'rgba(34,197,94'},
-    {name:'Temperature',desc:'T=0.7 → sharper',active:false,c:'rgba(249,115,22'},
+    {name:'Greedy',desc:'argmax P(next) → "mat"',active:false,c:'rgba(100,116,139'},
+    {name:'Top-k (k=40)',desc:'keep k highest prob tokens only',active:false,c:'rgba(59,130,246'},
+    {name:'Top-p=0.9 ⭐',desc:'keep tokens until ΣP≥0.9',active:true,c:'rgba(34,197,94'},
+    {name:'Temperature T',desc:'T<1: sharper  T>1: more random',active:false,c:'rgba(249,115,22'},
   ];
   for(const s of strategies){
     const d=document.createElement('div');d.style.cssText='border:1px solid '+s.c+',0.4);border-radius:5px;padding:7px 10px;background:'+s.c+',0.07);min-width:110px;opacity:0;transition:opacity 0.3s;';

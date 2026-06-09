@@ -145,7 +145,7 @@ header::after{content:'';display:block;height:1px;background:linear-gradient(90d
         </div>
       </div>
     </div>
-    <div class="sn2"><b>Iᵢ · Tⱼ = similarity score</b><br>Diagonal = matching pairs<br>Off-diagonal = mismatches<br><span class="eq">Softmax over rows AND cols</span></div>
+    <div class="sn2"><b>cos_sim(Iᵢ,Tⱼ) = Iᵢ·Tⱼ / (‖Iᵢ‖·‖Tⱼ‖)</b><br>Diagonal = matched pairs (high)<br>Off-diagonal = mismatches (low)<br><span class="eq">logit = cos_sim / τ  (τ=temperature)</span></div>
     <div class="done-check">✅</div>
   </div>
   <div class="sn2" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">Temperature τ<br>scales logits<br>→ sharpens dist.</span></div>
@@ -157,7 +157,7 @@ header::after{content:'';display:block;height:1px;background:linear-gradient(90d
   <div class="stage-label"><div class="stage-num">05</div><div class="stage-name">Contrastive Loss</div></div>
   <div class="sc">
     <div id="lossViz" style="display:flex;flex-direction:column;gap:6px;min-width:300px;"></div>
-    <div class="sn2"><b>InfoNCE / NT-Xent Loss</b><br>Maximize diagonal, minimize rest<br>Symmetric: image→text + text→image<br><span class="eq">L = -log(e^(sᵢᵢ/τ) / Σⱼ e^(sᵢⱼ/τ))</span></div>
+    <div class="sn2"><b>InfoNCE / NT-Xent Loss</b><br>Maximize diagonal, minimize rest<br>τ learned: small τ → sharper contrast<br><span class="eq">L = -log(e^(sᵢᵢ/τ) / Σⱼ e^(sᵢⱼ/τ))</span></div>
     <div class="done-check">✅</div>
   </div>
   <div class="sn2" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">Batch size is<br>crucial! Larger =<br>more negatives</span></div>

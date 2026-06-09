@@ -118,7 +118,7 @@ header::after{content:'';display:block;height:1px;background:linear-gradient(90d
       <div style="font-size:18px;color:var(--muted);" id="reEq">=</div>
       <div id="rZ" class="chip" style="border-color:rgba(20,184,166,0.6);color:var(--teal);background:rgba(20,184,166,0.12);font-size:14px;font-weight:700;padding:7px 14px;">z</div>
     </div>
-    <div class="sn2"><b>The KEY trick!</b><br>Makes sampling differentiable<br>Gradients can flow through<br><span class="eq">z = μ + σ·ε  (backprop works!)</span></div>
+    <div class="sn2"><b>The KEY trick!</b><br>Makes sampling differentiable<br>ε ~ N(0,1) drawn separately<br><span class="eq">z = μ + σ⊙ε,  ε∼N(0,I)</span></div>
     <div class="done-check">✅</div>
   </div>
   <div class="sn2" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">Without this:<br>z~N(μ,σ²) is<br>not differentiable</span></div>

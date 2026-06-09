@@ -109,7 +109,7 @@ header::after{content:'';display:block;height:1px;background:linear-gradient(90d
   <div class="stage-label"><div class="stage-num">03</div><div class="stage-name">State Recurrence</div></div>
   <div class="sc">
     <div id="stateViz" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;"></div>
-    <div class="sn2"><b>Hidden state hₜ ∈ ℝᴺ</b><br>Updated each timestep<br>Compressed memory of past<br><span class="eq">hₜ = Āhₜ₋₁ + B̄xₜ</span></div>
+    <div class="sn2"><b>Hidden state hₜ ∈ ℝᴺ</b><br>hₜ = Āhₜ₋₁ + B̄xₜ  (state update)<br>yₜ = Chₜ           (output)<br><span class="eq">Ā = exp(Δ·A),  B̄ = Δ·B (ZOH)</span></div>
     <div class="done-check">✅</div>
   </div>
   <div class="sn2" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">State N=16 to 64<br>Much smaller than<br>KV cache in Attn</span></div>
@@ -124,7 +124,7 @@ header::after{content:'';display:block;height:1px;background:linear-gradient(90d
       <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:5px;">Training: parallel prefix scan (O(n log n) work, O(log n) depth):</div>
       <div id="scanViz" style="display:flex;flex-direction:column;gap:4px;"></div>
     </div>
-    <div class="sn2"><b>Not sequential at train time!</b><br>Parallel scan = GPU efficient<br>All states computed in parallel<br><span class="eq">O(n) total work, O(log n) steps</span></div>
+    <div class="sn2"><b>Not sequential at train time!</b><br>Parallel prefix scan = GPU efficient<br>O(n) work total vs O(n²) attention<br><span class="eq">Each step: 2 multiplies + 1 add → O(n)</span></div>
     <div class="done-check">✅</div>
   </div>
   <div class="sn2" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">Hardware-aware<br>algorithm: fused<br>kernel on GPU</span></div>

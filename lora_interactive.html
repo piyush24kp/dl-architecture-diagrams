@@ -133,7 +133,7 @@ header::after{content:'';display:block;height:1px;background:linear-gradient(90d
   <div class="stage-label"><div class="stage-num">07</div><div class="stage-name">Merge &amp; Deploy</div></div>
   <div class="sc">
     <div id="mergeViz" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;"></div>
-    <div class="sn"><b>Merge: W' = W + BA</b><br>Zero inference overhead!<br>Or keep separate for hot-swapping<br><span class="eq">W' = W + (α/r)·B·A</span></div>
+    <div class="sn"><b>Merge formula: W' = W + (α/r)·BA</b><br>Zero inference overhead after merge!<br>Or keep separate for hot-swapping<br><span class="eq">W'_merged = W_frozen + (α/r)·B·A  ✓</span></div>
     <div class="done-check">✅</div>
   </div>
   <div class="sn" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">Hot-swap:<br>swap A,B per<br>user for multi-<br>tenant serving</span></div>
