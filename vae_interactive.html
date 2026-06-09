@@ -9,7 +9,7 @@
 :root{--bg:#0b0f1a;--bg2:#111827;--line:#1e293b;--muted:#475569;--text:#e2e8f0;--dim:#94a3b8;--blue:#3b82f6;--blue2:#60a5fa;--cyan:#06b6d4;--green:#22c55e;--orange:#f97316;--purple:#a855f7;--pink:#ec4899;--teal:#14b8a6;}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden;}
-header{text-align:center;padding:28px 20px 14px;}
+header{position:relative;text-align:center;padding:28px 20px 14px;}
 header::after{content:'';display:block;height:1px;background:linear-gradient(90deg,transparent,var(--teal),var(--purple),var(--teal),transparent);margin-top:16px;opacity:0.5;}
 .title{font-family:'Bebas Neue',sans-serif;font-size:clamp(26px,4.5vw,48px);letter-spacing:4px;background:linear-gradient(135deg,var(--teal),var(--purple),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
 .subtitle{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);margin-top:5px;letter-spacing:2px;text-transform:uppercase;}
@@ -59,10 +59,14 @@ header::after{content:'';display:block;height:1px;background:linear-gradient(90d
 .dspeed input{width:64px;accent-color:var(--teal);cursor:pointer;}
 .cursor{display:inline-block;animation:blink 1s step-end infinite;}
 @keyframes blink{50%{opacity:0;}}
+
+.nav-back{position:absolute;top:20px;left:20px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);text-decoration:none;border:1px solid var(--line);border-radius:4px;padding:4px 10px;transition:color 0.2s,border-color 0.2s;z-index:10;}
+.nav-back:hover{color:var(--cyan);border-color:var(--cyan);}
 </style>
 </head>
 <body>
 <header>
+  <a class="nav-back" href="index.html">← All Diagrams</a>
   <div class="title">VAE — Variational Autoencoder</div>
   <div class="subtitle">Encode → Latent Space → Reparameterize → Decode → Generate</div>
 </header>

@@ -43,7 +43,7 @@ body {
 
 /* ── HEADER ── */
 header {
-  text-align: center;
+  position: relative;text-align: center;
   padding: 32px 20px 16px;
   position: relative;
 }
@@ -520,11 +520,15 @@ header::after {
 /* bottom padding so last stage isn't hidden behind dock */
 .pipeline { padding-bottom: 100px !important; }
 .result-box { margin-bottom: 100px !important; }
+
+.nav-back{position:absolute;top:20px;left:20px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);text-decoration:none;border:1px solid var(--line);border-radius:4px;padding:4px 10px;transition:color 0.2s,border-color 0.2s;z-index:10;}
+.nav-back:hover{color:var(--cyan);border-color:var(--cyan);}
 </style>
 </head>
 <body>
 
 <header>
+  <a class="nav-back" href="index.html">← All Diagrams</a>
   <div class="title">CNN — Live Forward Pass</div>
   <div class="subtitle">Convolutional Neural Network · Interactive Animation · Image Classification</div>
 </header>
