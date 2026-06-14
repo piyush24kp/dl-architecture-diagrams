@@ -81,7 +81,6 @@ window.DIAGRAM={
   async function(){
    stageTitle('FINE-TUNING  ·  one backbone, many heads',C.green);
    const bert=chip(370,120,260,64,'Pre-trained BERT',C.cyan,{fs:14,solid:true});await appear(bert.g,360);
-   const tasks=[['Sentiment',C.a1,120],['NER tags',C.purple,370],['Q & A span',C.green,620],['Similarity',C.blue,...[120]]];
    const xs=[130,370,610];const names=['Sentiment','NER tagging','Question Answering'];const cols=[C.a1,C.purple,C.green];
    for(let i=0;i<3;i++){await flow(`M500,184 C500,250 ${xs[i]+110},250 ${xs[i]+110},310`,{color:cols[i],count:2,dur:600});
      const h=chip(xs[i],310,220,56,names[i],cols[i],{fs:12});await appear(h.g,260);}

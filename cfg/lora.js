@@ -77,7 +77,6 @@ window.DIAGRAM={
   async function(){
    stageTitle('SWAP ADAPTERS  ·  one base, many skills',C.cyan);
    const base=chip(380,120,240,64,'Frozen Base 🔒',C.muted,{fs:14,solid:true});await appear(base.g,360);
-   const tasks=[['💬 Chat',C.green,150],['💻 Code',C.a1,400],['⚕ Medical',C.purple,640]];
    const xs=[140,400,660];const names=['💬 Chat adapter','💻 Code adapter','⚕ Medical adapter'];const cols=[C.green,C.a1,C.purple];
    for(let i=0;i<3;i++){await flow(`M500,184 C500,250 ${xs[i]+110},250 ${xs[i]+110},300`,{color:cols[i],count:2,dur:500});
      const a=chip(xs[i],300,220,52,names[i],cols[i],{fs:12});await appear(a.g,240);txt(xs[i]+110,372,'~few MB',{size:9,fill:C.muted,parent:gMain});}
