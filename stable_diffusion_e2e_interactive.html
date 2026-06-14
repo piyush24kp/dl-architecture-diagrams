@@ -3,282 +3,46 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Stable Diffusion — End-to-End Pipeline</title>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap');
-:root{--bg:#0b0f1a;--bg2:#111827;--line:#1e293b;--muted:#475569;--text:#e2e8f0;--dim:#94a3b8;--blue:#3b82f6;--cyan:#06b6d4;--green:#22c55e;--orange:#f97316;--purple:#a855f7;--pink:#ec4899;--violet:#8b5cf6;--a1:#c084fc;--a2:#e879f9;}
-*{box-sizing:border-box;margin:0;padding:0;}
-body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden;}
-header{text-align:center;padding:24px 20px 12px;position:relative;}
-header::after{content:'';display:block;height:1px;background:linear-gradient(90deg,transparent,var(--a1),var(--pink),var(--orange),transparent);margin-top:14px;opacity:0.5;}
-.nav-back{position:absolute;top:20px;left:20px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);text-decoration:none;border:1px solid var(--line);border-radius:4px;padding:4px 10px;transition:color 0.2s;}
-.nav-back:hover{color:var(--a1);}
-.title{font-family:'Bebas Neue',sans-serif;font-size:clamp(24px,4vw,46px);letter-spacing:4px;background:linear-gradient(135deg,var(--a1),var(--pink),var(--orange));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
-.subtitle{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);margin-top:4px;letter-spacing:2px;text-transform:uppercase;}
-.progress-wrap{position:sticky;top:0;z-index:100;background:var(--bg);border-bottom:1px solid var(--line);}
-.progress-track{height:3px;background:var(--line);}.progress-fill{height:100%;background:linear-gradient(90deg,var(--a1),var(--pink));width:0%;transition:width 0.4s;}
-.pipeline{display:flex;flex-direction:column;padding:10px 24px 110px;max-width:1150px;margin:0 auto;}
-.stage{display:grid;grid-template-columns:130px 1fr 250px;gap:0 16px;align-items:center;padding:8px 0;transition:opacity 0.3s;position:relative;}
-.stage-label{text-align:right;padding-right:14px;}
-.stage-num{font-family:'Bebas Neue',sans-serif;font-size:28px;line-height:1;color:var(--muted);transition:color 0.3s;}
-.stage.active .stage-num{color:var(--a1);text-shadow:0 0 10px var(--a1);}.stage.done .stage-num{color:var(--green);}
-.stage-name{font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);}.stage.active .stage-name{color:var(--a2);}
-.sc{background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:12px 16px;transition:border-color 0.3s,box-shadow 0.3s;min-height:82px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;position:relative;overflow:hidden;}
-.stage.active .sc{border-color:rgba(192,132,252,0.45);box-shadow:0 0 22px rgba(192,132,252,0.1);}
-.stage.done .sc{border-color:rgba(34,197,94,0.2);}
-.stage.active .sc::before{content:'';position:absolute;top:-100%;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--a1),var(--pink),transparent);animation:scan 1.8s linear infinite;}
-@keyframes scan{to{top:200%;}}
-.sn{font-size:11px;line-height:1.55;color:var(--dim);}.sn b{color:var(--text);}
-.eq{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a1);background:rgba(192,132,252,0.08);border:1px solid rgba(192,132,252,0.2);padding:2px 8px;border-radius:3px;display:inline-block;margin-top:3px;}
-.conn{display:flex;height:18px;grid-column:1/-1;}.conn-line{width:2px;height:100%;background:var(--line);margin-left:96px;position:relative;overflow:hidden;}
-.cp{position:absolute;top:-20px;left:-3px;width:8px;height:20px;background:linear-gradient(to bottom,transparent,var(--a1),var(--pink));border-radius:4px;opacity:0;}
-.cp.go{animation:fd 0.6s ease-in forwards;}@keyframes fd{0%{top:-20px;opacity:1;}100%{top:100%;opacity:0;}}
-.done-check{position:absolute;top:8px;right:10px;font-size:13px;opacity:0;transition:opacity 0.4s;}.stage.done .done-check{opacity:1;}
-.result-box{margin:0 24px 110px;max-width:1102px;margin-left:auto;margin-right:auto;border:1px solid rgba(34,197,94,0.3);background:rgba(34,197,94,0.05);border-radius:8px;padding:14px 18px;display:none;}
-.result-box.show{display:flex;gap:14px;align-items:center;flex-wrap:wrap;animation:fi 0.5s ease;}
-@keyframes fi{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
-.dock{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:9999;display:flex;align-items:center;gap:10px;padding:9px 16px;background:rgba(10,15,30,0.93);backdrop-filter:blur(16px);border:1px solid rgba(192,132,252,0.35);border-radius:50px;box-shadow:0 8px 40px rgba(0,0,0,0.5);white-space:nowrap;}
-.db{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.8px;padding:6px 14px;border-radius:30px;border:1px solid;cursor:pointer;transition:all 0.18s;text-transform:uppercase;user-select:none;}
-.db:active{transform:scale(0.95);}
-.db-n{background:var(--a1);border-color:var(--a2);color:#000;font-weight:700;}
-.db-n:hover{opacity:0.85;}
-.db-n:disabled{background:#1e293b;border-color:#334155;color:#475569;cursor:not-allowed;}
-.db-a{background:transparent;border-color:var(--pink);color:var(--pink);}
-.db-r{background:transparent;border-color:#334155;color:var(--muted);}
-.db-r:hover{border-color:var(--cyan);color:var(--cyan);}
-.dsep{width:1px;height:20px;background:#1e293b;flex-shrink:0;}
-.dbadge{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a1);background:rgba(192,132,252,0.1);border:1px solid rgba(192,132,252,0.25);padding:4px 10px;border-radius:20px;min-width:140px;text-align:center;}
-.dspeed{display:flex;align-items:center;gap:5px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);}
-.dspeed input{width:60px;accent-color:var(--a1);cursor:pointer;}
-.cursor{display:inline-block;animation:blink 1s step-end infinite;}@keyframes blink{50%{opacity:0;}}
-</style>
+<title>STABLE DIFFUSION — Animated Walkthrough</title>
+<link rel="stylesheet" href="dl_engine.css">
 </head>
 <body>
+<template id="__bundler_thumbnail" data-bg-color="#0b0f1a">
+<svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg"><rect width="1200" height="800" fill="#0b0f1a"/><g transform="translate(600,90)" fill="none"><rect x="-150" y="0" width="300" height="74" rx="14" fill="#0e1322" fill-opacity="1" stroke="#f59e0b" stroke-width="6"/><line x1="0" y1="74" x2="0" y2="120" stroke="#f59e0b" stroke-width="6"/><rect x="-150" y="120" width="300" height="74" rx="14" fill="#0e1322" fill-opacity="1" stroke="#a855f7" stroke-width="6"/><line x1="0" y1="194" x2="0" y2="240" stroke="#a855f7" stroke-width="6"/><rect x="-150" y="240" width="300" height="74" rx="14" fill="#0e1322" fill-opacity="1" stroke="#06b6d4" stroke-width="6"/><line x1="0" y1="314" x2="0" y2="360" stroke="#06b6d4" stroke-width="6"/><rect x="-150" y="360" width="300" height="74" rx="14" fill="#f59e0b" fill-opacity="0.16" stroke="#22c55e" stroke-width="6"/></g><text x="600" y="660" text-anchor="middle" fill="#f59e0b" font-family="monospace" font-size="46" letter-spacing="5">STABLE DIFFUSION</text><text x="600" y="712" text-anchor="middle" fill="#475569" font-family="monospace" font-size="23" letter-spacing="2">latent text-to-image</text></svg>
+</template>
 <header>
-  <a class="nav-back" href="index.html">← All Diagrams</a>
-  <div class="title">Stable Diffusion — End-to-End</div>
-  <div class="subtitle">Text Prompt → CLIP → Latent → U-Net × 50 → Scheduler → VAE → 512px Image</div>
+  <a class="nav-back" href="index.html">← Library</a>
+  <div class="head-titles"><div class="title" id="hTitle">—</div><div class="subtitle" id="hSub">—</div></div>
+  <div class="head-eq" id="hEq">—</div>
 </header>
-<div class="progress-wrap"><div class="progress-track"><div class="progress-fill" id="pf"></div></div></div>
-<div class="pipeline" id="pipeline">
-
-<div class="stage" id="stage-0">
-  <div class="stage-label"><div class="stage-num">01</div><div class="stage-name">Text Prompt</div></div>
-  <div class="sc">
-    <div id="promptViz"></div>
-    <div class="sn"><b>Natural language description</b><br>Negative prompt also supported<br>Prompt engineering is a skill<br><span class="eq">"A cat on the moon, 8k, detailed"</span></div>
-    <div class="done-check">✅</div>
+<div class="app" data-mode="start">
+  <div class="archZone" id="archZone">
+    <div class="arch-label">ARCHITECTURE · YOU ARE HERE</div>
+    <div class="arch" id="arch"></div>
+    <div class="start-hint">▶ press Begin to walk through the architecture, block by block</div>
   </div>
-  <div class="sn" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">Words like<br>"photorealistic"<br>"cinematic"<br>steer style</span></div>
-</div>
-<div class="conn"><div class="conn-line"><div class="cp" id="cp0"></div></div></div>
-
-<div class="stage" id="stage-1">
-  <div class="stage-label"><div class="stage-num">02</div><div class="stage-name">CLIP Text Encoder</div></div>
-  <div class="sc">
-    <div id="clipViz" style="display:flex;gap:8px;align-items:center;"></div>
-    <div class="sn"><b>Tokenize → 12-layer Transformer</b><br>Output: 77 × 768 context tensor<br>Trained on 400M image-text pairs<br><span class="eq">text_embed ∈ R^(77×768)</span></div>
-    <div class="done-check">✅</div>
+  <div class="stageZone" id="stageZone">
+    <svg id="scene" viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid meet"></svg>
+    <div class="caption" id="caption">
+      <div class="cap-eyebrow" id="capEye">Step</div>
+      <div class="cap-title" id="capTitle">—</div>
+      <div class="cap-body" id="capBody">—</div>
+      <div class="cap-eq" id="capEq"></div>
+    </div>
   </div>
-  <div class="sn" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">Same CLIP used<br>in zero-shot<br>classification<br>Frozen in SD</span></div>
 </div>
-<div class="conn"><div class="conn-line"><div class="cp" id="cp1"></div></div></div>
-
-<div class="stage" id="stage-2">
-  <div class="stage-label"><div class="stage-num">03</div><div class="stage-name">Latent Noise</div></div>
-  <div class="sc">
-    <div id="latentViz" style="display:flex;gap:10px;align-items:center;"></div>
-    <div class="sn"><b>Start in VAE latent space</b><br>8× smaller than pixel space<br>512×512px → 64×64×4 latent<br><span class="eq">z_T ~ N(0, I)  shape: 64×64×4</span></div>
-    <div class="done-check">✅</div>
-  </div>
-  <div class="sn" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">Key insight:<br>diffuse in<br>latent space<br>NOT pixels</span></div>
-</div>
-<div class="conn"><div class="conn-line"><div class="cp" id="cp2"></div></div></div>
-
-<div class="stage" id="stage-3">
-  <div class="stage-label"><div class="stage-num">04</div><div class="stage-name">U-Net Denoiser</div></div>
-  <div class="sc">
-    <div id="unetViz" style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;"></div>
-    <div class="sn"><b>U-Net with cross-attention to text</b><br>Input: noisy latent + timestep t<br>Output: predicted noise ε̂<br><span class="eq">ε̂ = U-Net(z_t, t, text_embed)</span></div>
-    <div class="done-check">✅</div>
-  </div>
-  <div class="sn" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">Cross-attn injects<br>text into every<br>resolution of<br>the U-Net</span></div>
-</div>
-<div class="conn"><div class="conn-line"><div class="cp" id="cp3"></div></div></div>
-
-<div class="stage" id="stage-4">
-  <div class="stage-label"><div class="stage-num">05</div><div class="stage-name">CFG Guidance</div></div>
-  <div class="sc">
-    <div id="cfgViz" style="display:flex;flex-direction:column;gap:5px;min-width:320px;"></div>
-    <div class="sn"><b>Classifier-Free Guidance</b><br>Run U-Net twice each step<br>Amplify gap between cond/uncond<br><span class="eq">ε̂ = ε_u + w(ε_c - ε_u)  w=7.5</span></div>
-    <div class="done-check">✅</div>
-  </div>
-  <div class="sn" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">w=1: ignores<br>prompt<br>w=15: over-<br>saturated</span></div>
-</div>
-<div class="conn"><div class="conn-line"><div class="cp" id="cp4"></div></div></div>
-
-<div class="stage" id="stage-5">
-  <div class="stage-label"><div class="stage-num">06</div><div class="stage-name">DDIM Scheduler</div></div>
-  <div class="sc">
-    <div id="schedulerViz" style="display:flex;gap:4px;align-items:flex-end;"></div>
-    <div class="sn"><b>Step-by-step denoising</b><br>DDPM: 1000 steps (slow)<br>DDIM: 20-50 steps (deterministic)<br><span class="eq">z_{t-1} = f(z_t, ε̂, t, scheduler)</span></div>
-    <div class="done-check">✅</div>
-  </div>
-  <div class="sn" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">DPM-Solver:<br>~10-15 steps<br>LCM: 4 steps<br>Flash Diffusion</span></div>
-</div>
-<div class="conn"><div class="conn-line"><div class="cp" id="cp5"></div></div></div>
-
-<div class="stage" id="stage-6">
-  <div class="stage-label"><div class="stage-num">07</div><div class="stage-name">VAE Decoder</div></div>
-  <div class="sc">
-    <div id="vaeDecViz" style="display:flex;gap:10px;align-items:center;"></div>
-    <div class="sn"><b>Latent → Pixel space</b><br>64×64×4 → 512×512×3<br>Upsamples 8× via learned decoder<br><span class="eq">image = VAE_Decoder(z_0)</span></div>
-    <div class="done-check">✅</div>
-  </div>
-  <div class="sn" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">VAE trained<br>separately,<br>frozen during<br>diffusion train</span></div>
-</div>
-<div class="conn"><div class="conn-line"><div class="cp" id="cp6"></div></div></div>
-
-<div class="stage" id="stage-7">
-  <div class="stage-label"><div class="stage-num">08</div><div class="stage-name">Final Image</div></div>
-  <div class="sc">
-    <div id="finalImgViz" style="display:flex;gap:12px;align-items:center;"></div>
-    <div class="sn"><b>512×512 RGB image</b><br>Entire pipeline ~2-5 sec on GPU<br>SD XL: 1024×1024 native<br><span class="eq">pixel values ∈ [0, 255]</span></div>
-    <div class="done-check">✅</div>
-  </div>
-  <div class="sn" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">ControlNet adds<br>pose/depth/edge<br>conditioning on<br>top of this</span></div>
-</div>
-
-</div>
-
-<div class="result-box" id="resultBox">
-  <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;color:var(--green);">🖼️ Stable Diffusion Pipeline Complete</div>
-  <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text);">Text → CLIP → Noise → U-Net×50 → CFG → DDIM → VAE → 512px</div>
-  <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--a1);background:rgba(192,132,252,0.1);border:1px solid rgba(192,132,252,0.3);padding:3px 10px;border-radius:4px;">CLIP + VAE + U-Net + Diffusion — four architectures working together</div>
-</div>
-
+<div class="takeaways" id="takeaways"></div>
 <div class="dock">
-  <button class="db db-n" id="btnRun">▶ Next Step</button>
-  <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#334155;border:1px solid #1e293b;border-radius:3px;padding:1px 5px;">Space</span>
-  <div class="dsep"></div><button class="db db-a" id="btnAuto">⚡ Auto</button>
-  <div class="dsep"></div><div class="dbadge" id="stepIndicator">Ready<span class="cursor">_</span></div>
+  <button class="db db-p" id="btnPrev">‹ Prev</button>
+  <button class="db db-n" id="btnNext">▶ Begin</button>
+  <span class="kbd">Space</span><div class="dsep"></div>
+  <button class="db db-a" id="btnAuto">⚡ Auto</button><div class="dsep"></div>
+  <div class="dbadge" id="indicator">Ready<span class="cursor">_</span></div><div class="dsep"></div>
+  <div class="dspeed"><span>Speed</span><input type="range" id="speed" min="0.5" max="2.5" step="0.5" value="1"><span id="speedLbl">1×</span></div>
   <div class="dsep"></div>
-  <div class="dspeed"><span>Speed</span><input type="range" id="speedSlider" min="0.5" max="3" step="0.5" value="0.5"><span id="speedLabel">0.5×</span></div>
-  <div class="dsep"></div><button class="db db-r" id="btnReset">↺</button>
+  <button class="db db-r" id="btnReset">↺ Reset</button>
 </div>
-
-<script>
-let currentStage=-1,isRunning=false,speed=0.5;const TOTAL=8;
-document.getElementById('speedSlider').addEventListener('input',e=>{speed=parseFloat(e.target.value);document.getElementById('speedLabel').textContent=speed+'×';});
-function delay(ms){return new Promise(r=>setTimeout(r,ms/speed));}
-function scrollToStage(idx){const el=document.getElementById('stage-'+idx);if(!el)return;window.scrollTo({top:Math.max(0,window.pageYOffset+el.getBoundingClientRect().top-window.innerHeight/2+el.offsetHeight/2),behavior:'smooth'});}
-function syncBtn(){const b=document.getElementById('btnRun');if(currentStage>=TOTAL-1){b.textContent='↺ Restart';b.disabled=false;}else{b.innerHTML='▶ Next Step';b.disabled=isRunning;}}
-function setIndicator(html){document.getElementById('stepIndicator').innerHTML=html+'<span class="cursor">_</span>';}
-function fillProgress(){document.getElementById('pf').style.width=((currentStage+1)/TOTAL*100)+'%';}
-function pulse(id){const e=document.getElementById(id);if(e){e.classList.add('go');setTimeout(()=>e.classList.remove('go'),700);}}
-async function runStage(idx){
-  document.querySelectorAll('.stage').forEach((s,i)=>{
-    if(i===idx)s.style.opacity='1';
-    else if(s.classList.contains('done'))s.style.opacity='0.75';
-    else s.style.opacity='0.4';
-  });
-  const el=document.getElementById('stage-'+idx);el.classList.add('active');
-  setIndicator('<span style="color:var(--a1);">Stage '+(idx+1)+'/'+TOTAL+'</span>');fillProgress();
-  if(idx===0)await s0();else if(idx===1)await s1();else if(idx===2)await s2();else if(idx===3)await s3();else if(idx===4)await s4();else if(idx===5)await s5();else if(idx===6)await s6();else if(idx===7)await s7();
-  el.classList.remove('active');el.classList.add('done');el.style.opacity='0.75';pulse('cp'+idx);
-}
-function drawNoise(canvas,alpha){const c=canvas.getContext('2d');const d=c.createImageData(canvas.width,canvas.height);for(let i=0;i<d.data.length;i+=4){const v=Math.random()*255;d.data[i]=v*alpha;d.data[i+1]=v*alpha*0.8;d.data[i+2]=v*alpha+50*(1-alpha);d.data[i+3]=255;}c.putImageData(d,0,0);}
-function drawImg(canvas){const c=canvas.getContext('2d'),w=canvas.width,h=canvas.height;c.fillStyle='#050a18';c.fillRect(0,0,w,h);const g=c.createRadialGradient(w*0.5,h*0.45,2,w*0.5,h*0.45,w*0.3);g.addColorStop(0,'rgba(251,191,36,0.95)');g.addColorStop(1,'rgba(245,158,11,0.7)');c.fillStyle=g;c.beginPath();c.arc(w*0.5,h*0.45,w*0.28,0,Math.PI*2);c.fill();c.fillStyle='rgba(30,41,59,0.9)';c.beginPath();c.arc(w*0.38,h*0.4,w*0.06,0,Math.PI*2);c.fill();c.beginPath();c.arc(w*0.62,h*0.4,w*0.06,0,Math.PI*2);c.fill();c.fillStyle='rgba(200,230,255,0.3)';c.beginPath();c.arc(w*0.75,h*0.22,w*0.18,0,Math.PI*2);c.fill();for(let i=0;i<20;i++){c.fillStyle='rgba(255,255,255,'+(0.2+Math.random()*0.5)+')';c.beginPath();c.arc(Math.random()*w,Math.random()*h*0.6,0.8,0,Math.PI*2);c.fill();}}
-async function s0(){
-  const v=document.getElementById('promptViz');v.innerHTML='';
-  const pos=document.createElement('div');pos.style.cssText='border:1.5px solid rgba(192,132,252,0.5);border-radius:5px;padding:7px 14px;background:rgba(192,132,252,0.1);font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--a1);opacity:0;transition:opacity 0.5s;margin-bottom:5px;';pos.textContent='+ "A cat sitting on the moon, photorealistic, 8k"';v.appendChild(pos);
-  const neg=document.createElement('div');neg.style.cssText='border:1.5px solid rgba(239,68,68,0.4);border-radius:5px;padding:6px 14px;background:rgba(239,68,68,0.07);font-family:"JetBrains Mono",monospace;font-size:10px;color:rgba(239,68,68,0.8);opacity:0;transition:opacity 0.5s;';neg.textContent='– "blurry, low quality, cartoon"';v.appendChild(neg);
-  await delay(300);pos.style.opacity='1';await delay(350);neg.style.opacity='1';await delay(400);
-}
-async function s1(){
-  const v=document.getElementById('clipViz');v.innerHTML='';
-  const steps=[{t:'Tokenize',c:'rgba(192,132,252'},{t:'Transformer×12',c:'rgba(168,85,247'},{t:'77×768 embed',c:'rgba(192,132,252'}];
-  for(const s of steps){
-    const d=document.createElement('div');d.style.cssText='border:1px solid '+s.c+',0.4);border-radius:4px;padding:5px 10px;font-family:"JetBrains Mono",monospace;font-size:10px;color:'+s.c+',0.9);background:'+s.c+',0.08);opacity:0;transition:opacity 0.4s;';d.textContent=s.t;v.appendChild(d);
-    if(steps.indexOf(s)<steps.length-1){const a=document.createElement('span');a.style.cssText='color:var(--muted);font-size:16px;align-self:center;';a.textContent='→';v.appendChild(a);}
-    await delay(300);d.style.opacity='1';
-  }
-  const bars=document.createElement('div');bars.style.cssText='display:flex;gap:1.5px;align-items:flex-end;margin-left:8px;opacity:0;transition:opacity 0.4s;';
-  for(let i=0;i<12;i++){const b=document.createElement('div');b.style.cssText='width:8px;border-radius:1px 1px 0 0;background:var(--a1);opacity:'+(0.3+Math.random()*0.7)+';';b.style.height=(4+Math.random()*20)+'px';bars.appendChild(b);}
-  v.appendChild(bars);await delay(300);bars.style.opacity='1';await delay(300);
-}
-async function s2(){
-  const v=document.getElementById('latentViz');v.innerHTML='';
-  const noiseBox=document.createElement('div');noiseBox.style.cssText='text-align:center;opacity:0;transition:opacity 0.5s;';
-  const cv=document.createElement('canvas');cv.width=64;cv.height=64;cv.style.cssText='border-radius:3px;border:1px solid rgba(192,132,252,0.3);';
-  drawNoise(cv,1);
-  const lbl=document.createElement('div');lbl.style.cssText='font-family:"JetBrains Mono",monospace;font-size:8px;color:var(--muted);margin-top:3px;';lbl.textContent='z_T ~ N(0,I)';
-  noiseBox.appendChild(cv);noiseBox.appendChild(lbl);v.appendChild(noiseBox);
-  await delay(300);noiseBox.style.opacity='1';
-  const info=document.createElement('div');info.style.cssText='font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--a1);align-self:center;margin-left:10px;opacity:0;transition:opacity 0.4s;';
-  info.innerHTML='64×64×4<br><span style="font-size:9px;color:var(--muted);">latent tensor<br>4 channels<br>VAE encoded</span>';v.appendChild(info);
-  await delay(400);info.style.opacity='1';await delay(400);
-}
-async function s3(){
-  const v=document.getElementById('unetViz');v.innerHTML='';
-  const blocks=[{t:'Enc\n64×4',c:'rgba(59,130,246'},{t:'Cross\nAttn⊗txt',c:'rgba(192,132,252'},{t:'Bottleneck\n1024ch',c:'rgba(192,132,252'},{t:'Cross\nAttn⊗txt',c:'rgba(236,72,153'},{t:'Dec\n64×4',c:'rgba(59,130,246'},{t:'ε̂ noise',c:'rgba(34,197,94'}];
-  for(const b of blocks){
-    const d=document.createElement('div');d.style.cssText='border:1px solid '+b.c+',0.4);border-radius:4px;padding:4px 8px;font-family:"JetBrains Mono",monospace;font-size:9px;color:'+b.c+',0.9);background:'+b.c+',0.08);opacity:0;transition:opacity 0.3s;text-align:center;white-space:pre;';d.textContent=b.t;v.appendChild(d);
-    if(blocks.indexOf(b)<blocks.length-1){const a=document.createElement('span');a.style.cssText='color:var(--muted);font-size:11px;align-self:center;';a.textContent='→';v.appendChild(a);}
-    await delay(200);d.style.opacity='1';
-  }
-  await delay(300);
-}
-async function s4(){
-  const v=document.getElementById('cfgViz');v.innerHTML='';
-  const rows=[{t:'U-Net(z_t, t, ∅)  →  ε_uncond',c:'rgba(100,116,139'},{t:'U-Net(z_t, t, text)  →  ε_cond',c:'rgba(192,132,252'},{t:'ε̂ = ε_uncond + 7.5 × (ε_cond - ε_uncond)  →  guided step',c:'rgba(34,197,94',bold:true}];
-  for(const r of rows){const d=document.createElement('div');d.style.cssText='border:1px solid '+r.c+',0.4);border-radius:4px;padding:5px 10px;font-family:"JetBrains Mono",monospace;font-size:10px;color:'+r.c+',0.9);background:'+r.c+',0.06);opacity:0;transition:opacity 0.4s;'+(r.bold?'font-weight:700;':'');d.textContent=r.t;v.appendChild(d);await delay(380);d.style.opacity='1';}
-  await delay(300);
-}
-async function s5(){
-  const v=document.getElementById('schedulerViz');v.innerHTML='';
-  const steps=[{t:'t=999',alpha:1.0},{t:'t=750',alpha:0.75},{t:'t=500',alpha:0.5},{t:'t=250',alpha:0.28},{t:'t=100',alpha:0.15},{t:'t=0',alpha:0.0}];
-  for(let i=0;i<steps.length;i++){
-    const w=document.createElement('div');w.style.cssText='display:flex;flex-direction:column;align-items:center;gap:3px;opacity:0;transition:opacity 0.3s;';
-    const cv=document.createElement('canvas');cv.width=40;cv.height=40;cv.style.cssText='border-radius:3px;border:1px solid rgba(192,132,252,0.3);';
-    if(steps[i].alpha>0.05)drawNoise(cv,steps[i].alpha);else drawImg(cv);
-    const lbl=document.createElement('div');lbl.style.cssText='font-family:"JetBrains Mono",monospace;font-size:8px;color:var(--muted);';lbl.textContent=steps[i].t;
-    w.appendChild(cv);w.appendChild(lbl);v.appendChild(w);
-    if(i<steps.length-1){const a=document.createElement('span');a.style.cssText='color:var(--muted);font-size:14px;align-self:center;';a.textContent='→';v.appendChild(a);}
-    await delay(250);w.style.opacity='1';
-  }
-  await delay(400);
-}
-async function s6(){
-  const v=document.getElementById('vaeDecViz');v.innerHTML='';
-  const latentBox=document.createElement('div');latentBox.style.cssText='text-align:center;opacity:0;transition:opacity 0.5s;';
-  const lc=document.createElement('canvas');lc.width=48;lc.height=48;lc.style.cssText='border-radius:3px;border:1px solid rgba(192,132,252,0.3);';drawImg(lc);
-  const ll=document.createElement('div');ll.style.cssText='font-family:"JetBrains Mono",monospace;font-size:8px;color:var(--muted);margin-top:2px;';ll.textContent='64×64×4';
-  latentBox.appendChild(lc);latentBox.appendChild(ll);v.appendChild(latentBox);
-  await delay(300);latentBox.style.opacity='1';
-  const arr=document.createElement('span');arr.style.cssText='font-size:20px;color:var(--muted);align-self:center;';arr.textContent='→ VAE ×8 →';v.appendChild(arr);
-  const imgBox=document.createElement('div');imgBox.style.cssText='text-align:center;opacity:0;transition:opacity 0.6s;';
-  const ic=document.createElement('canvas');ic.width=72;ic.height=72;ic.style.cssText='border-radius:4px;border:2px solid rgba(34,197,94,0.5);';drawImg(ic);
-  const il=document.createElement('div');il.style.cssText='font-family:"JetBrains Mono",monospace;font-size:8px;color:var(--green);margin-top:2px;';il.textContent='512×512×3';
-  imgBox.appendChild(ic);imgBox.appendChild(il);v.appendChild(imgBox);
-  await delay(400);imgBox.style.opacity='1';await delay(400);
-}
-async function s7(){
-  const v=document.getElementById('finalImgViz');v.innerHTML='';
-  const cv=document.createElement('canvas');cv.width=100;cv.height=100;cv.style.cssText='border-radius:6px;border:2px solid rgba(192,132,252,0.5);box-shadow:0 0 20px rgba(192,132,252,0.2);opacity:0;transition:opacity 0.6s;';drawImg(cv);v.appendChild(cv);
-  const info=document.createElement('div');info.style.cssText='opacity:0;transition:opacity 0.5s;';
-  info.innerHTML='<div style="font-family:\'JetBrains Mono\',monospace;font-size:11px;color:var(--a1);font-weight:700;">✅ Generated!</div><div style="font-family:\'JetBrains Mono\',monospace;font-size:9px;color:var(--muted);margin-top:4px;">512×512px · ~3 sec · DDIM 50 steps</div><div style="font-family:\'JetBrains Mono\',monospace;font-size:9px;color:var(--muted);margin-top:2px;">Prompt faithfully followed via CFG</div>';
-  v.appendChild(info);
-  await delay(300);cv.style.opacity='1';await delay(400);info.style.opacity='1';
-  await delay(400);document.getElementById('resultBox').classList.add('show');setIndicator('<span style="color:var(--green);">✅ Complete!</span>');
-}
-document.getElementById('btnRun').addEventListener('click',()=>{if(currentStage>=TOTAL-1){resetAll();return;}if(isRunning)return;isRunning=true;syncBtn();currentStage++;scrollToStage(currentStage);runStage(currentStage).then(()=>{isRunning=false;syncBtn();});});
-document.getElementById('btnAuto').addEventListener('click',async()=>{if(isRunning)return;if(currentStage>=TOTAL-1){resetAll();await delay(300);}isRunning=true;syncBtn();while(currentStage<TOTAL-1){currentStage++;scrollToStage(currentStage);await runStage(currentStage);await delay(350);}isRunning=false;syncBtn();});
-document.getElementById('btnReset').addEventListener('click',resetAll);
-document.addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;if(e.code==='Space'||e.code==='ArrowRight'){e.preventDefault();document.getElementById('btnRun').click();}if(e.code==='KeyR'){e.preventDefault();resetAll();}if(e.code==='KeyA'){e.preventDefault();document.getElementById('btnAuto').click();}});
-function resetAll(){isRunning=false;currentStage=-1;syncBtn();document.querySelectorAll('.stage').forEach((s,i)=>{s.classList.remove('active','done');s.style.opacity=i===0?'1':'0.4';});document.getElementById('pf').style.width='0%';setIndicator('Ready');document.getElementById('resultBox').classList.remove('show');['promptViz','clipViz','latentViz','unetViz','cfgViz','schedulerViz','vaeDecViz','finalImgViz'].forEach(id=>{const e=document.getElementById(id);if(e)e.innerHTML='';});}
-(function initOpacity(){document.querySelectorAll('.stage').forEach((s,i)=>{s.style.opacity=i===0?'1':'0.4';});})();
-syncBtn();
-</script>
+<script src="cfg/stable_diffusion_e2e.js"></script>
+<script src="dl_engine.js"></script>
 </body>
 </html>
