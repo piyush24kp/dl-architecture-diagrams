@@ -3,302 +3,46 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RNN / LSTM / GRU — Sequential Memory</title>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap');
-:root{--bg:#0b0f1a;--bg2:#111827;--line:#1e293b;--muted:#475569;--text:#e2e8f0;--dim:#94a3b8;--blue:#3b82f6;--blue2:#60a5fa;--cyan:#06b6d4;--green:#22c55e;--orange:#f97316;--purple:#a855f7;--pink:#ec4899;--red:#ef4444;--a1:#06b6d4;--a2:#22d3ee;}
-*{box-sizing:border-box;margin:0;padding:0;}
-body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden;}
-header{text-align:center;padding:24px 20px 12px;position:relative;}
-header::after{content:'';display:block;height:1px;background:linear-gradient(90deg,transparent,var(--a1),var(--blue),transparent);margin-top:14px;opacity:0.5;}
-.nav-back{position:absolute;top:20px;left:20px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);text-decoration:none;border:1px solid var(--line);border-radius:4px;padding:4px 10px;transition:color 0.2s,border-color 0.2s;}
-.nav-back:hover{color:var(--a1);border-color:var(--a1);}
-.title{font-family:'Bebas Neue',sans-serif;font-size:clamp(24px,4vw,46px);letter-spacing:4px;background:linear-gradient(135deg,var(--a1),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
-.subtitle{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);margin-top:4px;letter-spacing:2px;text-transform:uppercase;}
-.progress-wrap{position:sticky;top:0;z-index:100;background:var(--bg);border-bottom:1px solid var(--line);}
-.progress-track{height:3px;background:var(--line);}.progress-fill{height:100%;background:linear-gradient(90deg,var(--a1),var(--blue));width:0%;transition:width 0.4s;}
-.pipeline{display:flex;flex-direction:column;padding:10px 24px 110px;max-width:1150px;margin:0 auto;}
-.stage{display:grid;grid-template-columns:130px 1fr 250px;gap:0 16px;align-items:center;padding:8px 0;transition:opacity 0.3s;position:relative;}
-.stage-label{text-align:right;padding-right:14px;}
-.stage-num{font-family:'Bebas Neue',sans-serif;font-size:28px;line-height:1;color:var(--muted);transition:color 0.3s;}
-.stage.active .stage-num{color:var(--a1);text-shadow:0 0 10px var(--a1);}.stage.done .stage-num{color:var(--green);}
-.stage-name{font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);}.stage.active .stage-name{color:var(--a2);}
-.sc{background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:12px 16px;transition:border-color 0.3s,box-shadow 0.3s;min-height:82px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;position:relative;overflow:hidden;}
-.stage.active .sc{border-color:rgba(6,182,212,0.45);box-shadow:0 0 22px rgba(6,182,212,0.1);}
-.stage.done .sc{border-color:rgba(34,197,94,0.2);}
-.stage.active .sc::before{content:'';position:absolute;top:-100%;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--a1),var(--blue),transparent);animation:scan 1.8s linear infinite;}
-@keyframes scan{to{top:200%;}}
-.sn{font-size:11px;line-height:1.55;color:var(--dim);}.sn b{color:var(--text);}
-.eq{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a1);background:rgba(6,182,212,0.08);border:1px solid rgba(6,182,212,0.2);padding:2px 8px;border-radius:3px;display:inline-block;margin-top:3px;}
-.conn{display:flex;height:18px;grid-column:1/-1;}.conn-line{width:2px;height:100%;background:var(--line);margin-left:96px;position:relative;overflow:hidden;}
-.cp{position:absolute;top:-20px;left:-3px;width:8px;height:20px;background:linear-gradient(to bottom,transparent,var(--a1),var(--blue));border-radius:4px;opacity:0;}
-.cp.go{animation:fd 0.6s ease-in forwards;}@keyframes fd{0%{top:-20px;opacity:1;}100%{top:100%;opacity:0;}}
-.done-check{position:absolute;top:8px;right:10px;font-size:13px;opacity:0;transition:opacity 0.4s;}.stage.done .done-check{opacity:1;}
-.result-box{margin:0 24px 110px;max-width:1102px;margin-left:auto;margin-right:auto;border:1px solid rgba(34,197,94,0.3);background:rgba(34,197,94,0.05);border-radius:8px;padding:14px 18px;display:none;}
-.result-box.show{display:flex;gap:14px;align-items:center;flex-wrap:wrap;animation:fi 0.5s ease;}
-@keyframes fi{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
-.dock{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:9999;display:flex;align-items:center;gap:10px;padding:9px 16px;background:rgba(10,15,30,0.93);backdrop-filter:blur(16px);border:1px solid rgba(6,182,212,0.35);border-radius:50px;box-shadow:0 8px 40px rgba(0,0,0,0.5);white-space:nowrap;}
-.db{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.8px;padding:6px 14px;border-radius:30px;border:1px solid;cursor:pointer;transition:all 0.18s;text-transform:uppercase;user-select:none;}
-.db:active{transform:scale(0.95);}
-.db-n{background:var(--a1);border-color:var(--a2);color:#000;font-weight:700;}
-.db-n:hover{opacity:0.85;}
-.db-n:disabled{background:#1e293b;border-color:#334155;color:#475569;cursor:not-allowed;}
-.db-a{background:transparent;border-color:var(--blue);color:var(--blue);}
-.db-r{background:transparent;border-color:#334155;color:var(--muted);}
-.db-r:hover{border-color:var(--cyan);color:var(--cyan);}
-.dsep{width:1px;height:20px;background:#1e293b;flex-shrink:0;}
-.dbadge{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a1);background:rgba(6,182,212,0.1);border:1px solid rgba(6,182,212,0.25);padding:4px 10px;border-radius:20px;min-width:140px;text-align:center;}
-.dspeed{display:flex;align-items:center;gap:5px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);}
-.dspeed input{width:60px;accent-color:var(--a1);cursor:pointer;}
-.cursor{display:inline-block;animation:blink 1s step-end infinite;}@keyframes blink{50%{opacity:0;}}
-</style>
+<title>RNN — Animated Walkthrough</title>
+<link rel="stylesheet" href="dl_engine.css">
 </head>
 <body>
+<template id="__bundler_thumbnail" data-bg-color="#0b0f1a">
+<svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg"><rect width="1200" height="800" fill="#0b0f1a"/><g transform="translate(600,90)" fill="none"><rect x="-150" y="0" width="300" height="74" rx="14" fill="#0e1322" fill-opacity="1" stroke="#f59e0b" stroke-width="6"/><line x1="0" y1="74" x2="0" y2="120" stroke="#f59e0b" stroke-width="6"/><rect x="-150" y="120" width="300" height="74" rx="14" fill="#0e1322" fill-opacity="1" stroke="#a855f7" stroke-width="6"/><line x1="0" y1="194" x2="0" y2="240" stroke="#a855f7" stroke-width="6"/><rect x="-150" y="240" width="300" height="74" rx="14" fill="#0e1322" fill-opacity="1" stroke="#06b6d4" stroke-width="6"/><line x1="0" y1="314" x2="0" y2="360" stroke="#06b6d4" stroke-width="6"/><rect x="-150" y="360" width="300" height="74" rx="14" fill="#f59e0b" fill-opacity="0.16" stroke="#22c55e" stroke-width="6"/></g><text x="600" y="660" text-anchor="middle" fill="#f59e0b" font-family="monospace" font-size="46" letter-spacing="5">RNN</text><text x="600" y="712" text-anchor="middle" fill="#475569" font-family="monospace" font-size="23" letter-spacing="2">ht=tanh(Wxt+Wht-1)</text></svg>
+</template>
 <header>
-  <a class="nav-back" href="index.html">← All Diagrams</a>
-  <div class="title">RNN / LSTM / GRU</div>
-  <div class="subtitle">Sequential Memory · Vanishing Gradients · Gates · Why Transformers Won</div>
+  <a class="nav-back" href="index.html">← Library</a>
+  <div class="head-titles"><div class="title" id="hTitle">—</div><div class="subtitle" id="hSub">—</div></div>
+  <div class="head-eq" id="hEq">—</div>
 </header>
-<div class="progress-wrap"><div class="progress-track"><div class="progress-fill" id="pf"></div></div></div>
-<div class="pipeline" id="pipeline">
-
-<div class="stage" id="stage-0">
-  <div class="stage-label"><div class="stage-num">01</div><div class="stage-name">Vanilla RNN</div></div>
-  <div class="sc">
-    <div id="rnnViz" style="display:flex;gap:5px;align-items:center;"></div>
-    <div class="sn"><b>Hidden state carries memory</b><br>hₜ = tanh(W·[hₜ₋₁, xₜ] + b)<br>Same weights at every timestep<br><span class="eq">hₜ = tanh(W_h·hₜ₋₁ + W_x·xₜ)</span></div>
-    <div class="done-check">✅</div>
+<div class="app" data-mode="start">
+  <div class="archZone" id="archZone">
+    <div class="arch-label">ARCHITECTURE · YOU ARE HERE</div>
+    <div class="arch" id="arch"></div>
+    <div class="start-hint">▶ press Begin to walk through the architecture, block by block</div>
   </div>
-  <div class="sn" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">Processes one<br>token at a time<br>Cannot parallelise<br>→ slow training</span></div>
-</div>
-<div class="conn"><div class="conn-line"><div class="cp" id="cp0"></div></div></div>
-
-<div class="stage" id="stage-1">
-  <div class="stage-label"><div class="stage-num">02</div><div class="stage-name">Vanishing Gradient</div></div>
-  <div class="sc">
-    <div id="vanishViz" style="display:flex;gap:5px;align-items:flex-end;height:60px;"></div>
-    <div class="sn"><b>Critical failure of vanilla RNN</b><br>Gradient shrinks through BPTT steps<br>"The cat … was hungry" — fails at 20+ steps<br><span class="eq">∂L/∂h₀ ≈ 0 after t steps</span></div>
-    <div class="done-check">✅</div>
+  <div class="stageZone" id="stageZone">
+    <svg id="scene" viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid meet"></svg>
+    <div class="caption" id="caption">
+      <div class="cap-eyebrow" id="capEye">Step</div>
+      <div class="cap-title" id="capTitle">—</div>
+      <div class="cap-body" id="capBody">—</div>
+      <div class="cap-eq" id="capEq"></div>
+    </div>
   </div>
-  <div class="sn" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">Exploding grad<br>also occurs:<br>gradient clipping<br>patches it</span></div>
 </div>
-<div class="conn"><div class="conn-line"><div class="cp" id="cp1"></div></div></div>
-
-<div class="stage" id="stage-2">
-  <div class="stage-label"><div class="stage-num">03</div><div class="stage-name">LSTM Gates</div></div>
-  <div class="sc">
-    <div id="lstmViz" style="display:flex;flex-direction:column;gap:5px;min-width:320px;"></div>
-    <div class="sn"><b>3 gates control memory flow</b><br>Forget gate: what to erase from cell<br>Input gate: what new info to add<br>Output gate: what to expose<br><span class="eq">cₜ = f⊙cₜ₋₁ + i⊙g̃  (cell state)</span></div>
-    <div class="done-check">✅</div>
-  </div>
-  <div class="sn" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">Hochreiter &<br>Schmidhuber<br>1997 — solved<br>vanishing grad</span></div>
-</div>
-<div class="conn"><div class="conn-line"><div class="cp" id="cp2"></div></div></div>
-
-<div class="stage" id="stage-3">
-  <div class="stage-label"><div class="stage-num">04</div><div class="stage-name">LSTM Cell State</div></div>
-  <div class="sc">
-    <div id="cellViz" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;"></div>
-    <div class="sn"><b>Highway for long-range memory</b><br>Cell state flows almost unchanged<br>Gates add/remove information<br><span class="eq">cₜ = forget⊙cₜ₋₁ + input⊙g̃</span></div>
-    <div class="done-check">✅</div>
-  </div>
-  <div class="sn" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">Cell state is<br>the key insight<br>allows 1000+<br>step memory</span></div>
-</div>
-<div class="conn"><div class="conn-line"><div class="cp" id="cp3"></div></div></div>
-
-<div class="stage" id="stage-4">
-  <div class="stage-label"><div class="stage-num">05</div><div class="stage-name">GRU Simplification</div></div>
-  <div class="sc">
-    <div id="gruViz" style="display:flex;flex-direction:column;gap:5px;min-width:320px;"></div>
-    <div class="sn"><b>Merge cell + hidden state</b><br>Only 2 gates: Reset + Update<br>Fewer params, similar performance<br><span class="eq">hₜ = (1-z)⊙hₜ₋₁ + z⊙h̃ₜ</span></div>
-    <div class="done-check">✅</div>
-  </div>
-  <div class="sn" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">Cho et al. 2014<br>~33% fewer<br>params than<br>LSTM</span></div>
-</div>
-<div class="conn"><div class="conn-line"><div class="cp" id="cp4"></div></div></div>
-
-<div class="stage" id="stage-5">
-  <div class="stage-label"><div class="stage-num">06</div><div class="stage-name">Bi-directional RNN</div></div>
-  <div class="sc">
-    <div id="biRnnViz" style="display:flex;flex-direction:column;gap:6px;"></div>
-    <div class="sn"><b>Forward + backward pass</b><br>Each token sees left AND right context<br>Used in early NLP (ELMo, pre-BERT)<br><span class="eq">hₜ = [h→ₜ ; h←ₜ]  (concatenate)</span></div>
-    <div class="done-check">✅</div>
-  </div>
-  <div class="sn" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">Can't be used<br>for generation<br>(needs future)<br>only encoding</span></div>
-</div>
-<div class="conn"><div class="conn-line"><div class="cp" id="cp5"></div></div></div>
-
-<div class="stage" id="stage-6">
-  <div class="stage-label"><div class="stage-num">07</div><div class="stage-name">Why Transformers Won</div></div>
-  <div class="sc">
-    <div id="comparisonViz" style="overflow-x:auto;width:100%;"></div>
-    <div class="sn"><b>Attention is all you need</b><br>Vaswani et al. 2017 replaced RNNs<br>Transformers train faster, scale better<br><span class="eq">But LSTM lives on in SSMs & Mamba!</span></div>
-    <div class="done-check">✅</div>
-  </div>
-  <div class="sn" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">Mamba SSM is<br>essentially a<br>learned linear<br>RNN — revival!</span></div>
-</div>
-
-</div>
-
-<div class="result-box" id="resultBox">
-  <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;color:var(--green);">✅ RNN → LSTM → Transformer Journey Complete</div>
-  <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text);">Vanilla RNN → vanishing gradient → LSTM gates → GRU → Attention replaces all</div>
-  <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--a1);background:rgba(6,182,212,0.1);border:1px solid rgba(6,182,212,0.3);padding:3px 10px;border-radius:4px;">Sequential → Gated → Parallel Attention · LSTM lives on in Mamba/SSM</div>
-</div>
-
+<div class="takeaways" id="takeaways"></div>
 <div class="dock">
-  <button class="db db-n" id="btnRun">▶ Next Step</button>
-  <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#334155;border:1px solid #1e293b;border-radius:3px;padding:1px 5px;">Space</span>
-  <div class="dsep"></div><button class="db db-a" id="btnAuto">⚡ Auto</button>
-  <div class="dsep"></div><div class="dbadge" id="stepIndicator">Ready<span class="cursor">_</span></div>
+  <button class="db db-p" id="btnPrev">‹ Prev</button>
+  <button class="db db-n" id="btnNext">▶ Begin</button>
+  <span class="kbd">Space</span><div class="dsep"></div>
+  <button class="db db-a" id="btnAuto">⚡ Auto</button><div class="dsep"></div>
+  <div class="dbadge" id="indicator">Ready<span class="cursor">_</span></div><div class="dsep"></div>
+  <div class="dspeed"><span>Speed</span><input type="range" id="speed" min="0.5" max="2.5" step="0.5" value="1"><span id="speedLbl">1×</span></div>
   <div class="dsep"></div>
-  <div class="dspeed"><span>Speed</span><input type="range" id="speedSlider" min="0.5" max="3" step="0.5" value="0.5"><span id="speedLabel">0.5×</span></div>
-  <div class="dsep"></div><button class="db db-r" id="btnReset">↺</button>
+  <button class="db db-r" id="btnReset">↺ Reset</button>
 </div>
-
-<script>
-let currentStage=-1,isRunning=false,speed=0.5;const TOTAL=7;
-document.getElementById('speedSlider').addEventListener('input',e=>{speed=parseFloat(e.target.value);document.getElementById('speedLabel').textContent=speed+'×';});
-function delay(ms){return new Promise(r=>setTimeout(r,ms/speed));}
-function scrollToStage(idx){const el=document.getElementById('stage-'+idx);if(!el)return;window.scrollTo({top:Math.max(0,window.pageYOffset+el.getBoundingClientRect().top-window.innerHeight/2+el.offsetHeight/2),behavior:'smooth'});}
-function syncBtn(){const b=document.getElementById('btnRun');if(currentStage>=TOTAL-1){b.textContent='↺ Restart';b.disabled=false;}else{b.innerHTML='▶ Next Step';b.disabled=isRunning;}}
-function setIndicator(html){document.getElementById('stepIndicator').innerHTML=html+'<span class="cursor">_</span>';}
-function fillProgress(){document.getElementById('pf').style.width=((currentStage+1)/TOTAL*100)+'%';}
-function pulse(id){const e=document.getElementById(id);if(e){e.classList.add('go');setTimeout(()=>e.classList.remove('go'),700);}}
-async function runStage(idx){
-  document.querySelectorAll('.stage').forEach((s,i)=>{
-    if(i===idx)s.style.opacity='1';
-    else if(s.classList.contains('done'))s.style.opacity='0.75';
-    else s.style.opacity='0.4';
-  });
-  const el=document.getElementById('stage-'+idx);el.classList.add('active');
-  setIndicator('<span style="color:var(--a1);">Stage '+(idx+1)+'/'+TOTAL+'</span>');fillProgress();
-  if(idx===0)await s0();else if(idx===1)await s1();else if(idx===2)await s2();else if(idx===3)await s3();else if(idx===4)await s4();else if(idx===5)await s5();else if(idx===6)await s6();
-  el.classList.remove('active');el.classList.add('done');el.style.opacity='0.75';pulse('cp'+idx);
-}
-
-async function s0(){
-  const v=document.getElementById('rnnViz');v.innerHTML='';
-  const tokens=['x₁','x₂','x₃','x₄','x₅'];
-  for(let i=0;i<5;i++){
-    const cell=document.createElement('div');cell.style.cssText='display:flex;flex-direction:column;align-items:center;gap:4px;opacity:0;transition:opacity 0.3s;';
-    const hBox=document.createElement('div');hBox.style.cssText='border:1.5px solid rgba(6,182,212,0.5);border-radius:4px;padding:4px 8px;font-family:"JetBrains Mono",monospace;font-size:9px;color:var(--a1);background:rgba(6,182,212,0.1);text-align:center;';hBox.innerHTML='RNN<br><span style="font-size:8px;">h'+i+'</span>';
-    const xBox=document.createElement('div');xBox.style.cssText='font-family:"JetBrains Mono",monospace;font-size:9px;color:var(--orange);';xBox.textContent=tokens[i];
-    cell.appendChild(hBox);cell.appendChild(xBox);v.appendChild(cell);
-    if(i<4){const arr=document.createElement('div');arr.style.cssText='font-size:14px;color:var(--a1);align-self:center;margin-bottom:18px;';arr.textContent='→';v.appendChild(arr);}
-    await delay(200);cell.style.opacity='1';
-  }
-  await delay(400);
-}
-
-async function s1(){
-  const v=document.getElementById('vanishViz');v.innerHTML='';
-  const steps=['t=1','t=2','t=3','t=4','t=5','t=10','t=20'];
-  const gradients=[1.0,0.7,0.49,0.34,0.24,0.06,0.004];
-  const colors=['#22c55e','#4ade80','#86efac','#fbbf24','#f97316','#ef4444','rgba(239,68,68,0.3)'];
-  for(let i=0;i<steps.length;i++){
-    const w=document.createElement('div');w.style.cssText='display:flex;flex-direction:column;align-items:center;gap:2px;';
-    const bar=document.createElement('div');bar.style.cssText='width:26px;height:2px;border-radius:2px 2px 0 0;background:'+colors[i]+';transition:height 0.5s cubic-bezier(0.34,1.56,0.64,1);';
-    const lbl=document.createElement('div');lbl.style.cssText='font-family:"JetBrains Mono",monospace;font-size:7px;color:var(--muted);writing-mode:vertical-rl;transform:rotate(180deg);height:20px;';lbl.textContent=steps[i];
-    w.appendChild(bar);w.appendChild(lbl);v.appendChild(w);
-    await delay(150);bar.style.height=(gradients[i]*56)+'px';
-  }
-  await delay(400);
-}
-
-async function s2(){
-  const v=document.getElementById('lstmViz');v.innerHTML='';
-  const gates=[
-    {name:'Forget Gate (f)',eq:'f = σ(W_f·[hₜ₋₁,xₜ]+b_f)',desc:'What % of old memory to keep',c:'rgba(239,68,68','icon':'🗑'},
-    {name:'Input Gate (i)',eq:'i = σ(W_i·[hₜ₋₁,xₜ]+b_i)',desc:'What new info to write to cell',c:'rgba(34,197,94','icon':'✍'},
-    {name:'Output Gate (o)',eq:'o = σ(W_o·[hₜ₋₁,xₜ]+b_o)',desc:'What cell state to expose',c:'rgba(6,182,212','icon':'📤'},
-  ];
-  for(const g of gates){
-    const d=document.createElement('div');d.style.cssText='border:1px solid '+g.c+',0.4);border-radius:4px;padding:6px 10px;background:'+g.c+',0.07);opacity:0;transition:opacity 0.5s;display:flex;gap:8px;align-items:center;';
-    d.innerHTML='<span style="font-size:16px;">'+g.icon+'</span><div><div style="font-family:\'JetBrains Mono\',monospace;font-size:10px;color:'+g.c+',0.9);font-weight:700;">'+g.name+'</div><div style="font-family:\'JetBrains Mono\',monospace;font-size:9px;color:var(--muted);">'+g.desc+'</div><div style="font-family:\'JetBrains Mono\',monospace;font-size:9px;color:var(--dim);margin-top:2px;">'+g.eq+'</div></div>';
-    v.appendChild(d);await delay(450);d.style.opacity='1';
-  }
-  await delay(400);
-}
-
-async function s3(){
-  const v=document.getElementById('cellViz');v.innerHTML='';
-  const parts=[
-    {t:'cₜ₋₁\n(old cell)',c:'rgba(168,85,247'},
-    {t:'×',plain:true},{t:'f\n(forget)',c:'rgba(239,68,68'},
-    {t:'+',plain:true},{t:'i⊙g̃\n(new info)',c:'rgba(34,197,94'},
-    {t:'=',plain:true},{t:'cₜ\n(new cell)',c:'rgba(6,182,212',bold:true},
-  ];
-  for(const p of parts){
-    if(p.plain){const s=document.createElement('span');s.style.cssText='font-size:20px;color:var(--muted);align-self:center;margin:0 3px;';s.textContent=p.t;v.appendChild(s);}
-    else{const d=document.createElement('div');d.style.cssText='border:1px solid '+p.c+',0.45);border-radius:4px;padding:5px 9px;font-family:"JetBrains Mono",monospace;font-size:9px;color:'+p.c+',0.9);background:'+p.c+',0.08);opacity:0;transition:opacity 0.4s;text-align:center;white-space:pre;'+(p.bold?'font-weight:700;':'');d.textContent=p.t;v.appendChild(d);await delay(280);d.style.opacity='1';}
-  }
-  await delay(400);
-}
-
-async function s4(){
-  const v=document.getElementById('gruViz');v.innerHTML='';
-  const rows=[
-    {t:'Update gate (z): blend old vs new hidden state',c:'rgba(6,182,212',eq:'z = σ(W_z·[hₜ₋₁,xₜ])'},
-    {t:'Reset gate (r): how much past to forget',c:'rgba(168,85,247',eq:'r = σ(W_r·[hₜ₋₁,xₜ])'},
-    {t:'New state: hₜ = (1-z)⊙hₜ₋₁ + z⊙h̃ₜ',c:'rgba(34,197,94',eq:'← simpler than LSTM, similar results',bold:true},
-  ];
-  for(const r of rows){
-    const d=document.createElement('div');d.style.cssText='border:1px solid '+r.c+',0.4);border-radius:4px;padding:5px 10px;background:'+r.c+',0.07);opacity:0;transition:opacity 0.4s;';
-    d.innerHTML='<div style="font-family:\'JetBrains Mono\',monospace;font-size:10px;color:'+r.c+',0.9);'+(r.bold?'font-weight:700;':'')+'">'+r.t+'</div><div style="font-family:\'JetBrains Mono\',monospace;font-size:9px;color:var(--muted);margin-top:2px;">'+r.eq+'</div>';
-    v.appendChild(d);await delay(400);d.style.opacity='1';
-  }
-  await delay(400);
-}
-
-async function s5(){
-  const v=document.getElementById('biRnnViz');v.innerHTML='';
-  const tokens=['I','love','deep','learning'];
-  const fwd=document.createElement('div');fwd.style.cssText='display:flex;gap:5px;align-items:center;opacity:0;transition:opacity 0.4s;';
-  const fwdLbl=document.createElement('div');fwdLbl.style.cssText='font-family:"JetBrains Mono",monospace;font-size:9px;color:var(--a1);width:50px;';fwdLbl.textContent='Forward →';fwd.appendChild(fwdLbl);
-  for(let i=0;i<tokens.length;i++){
-    const d=document.createElement('div');d.style.cssText='border:1px solid rgba(6,182,212,0.4);border-radius:3px;padding:3px 8px;font-family:"JetBrains Mono",monospace;font-size:9px;color:var(--a1);background:rgba(6,182,212,0.08);';d.textContent=tokens[i];fwd.appendChild(d);
-    if(i<tokens.length-1){const a=document.createElement('span');a.style.cssText='color:var(--a1);font-size:12px;';a.textContent='→';fwd.appendChild(a);}
-  }
-  const bwd=document.createElement('div');bwd.style.cssText='display:flex;gap:5px;align-items:center;opacity:0;transition:opacity 0.4s;';
-  const bwdLbl=document.createElement('div');bwdLbl.style.cssText='font-family:"JetBrains Mono",monospace;font-size:9px;color:var(--purple);width:50px;';bwdLbl.textContent='← Backward';bwd.appendChild(bwdLbl);
-  for(let i=tokens.length-1;i>=0;i--){
-    const d=document.createElement('div');d.style.cssText='border:1px solid rgba(168,85,247,0.4);border-radius:3px;padding:3px 8px;font-family:"JetBrains Mono",monospace;font-size:9px;color:var(--purple);background:rgba(168,85,247,0.08);';d.textContent=tokens[i];bwd.appendChild(d);
-    if(i>0){const a=document.createElement('span');a.style.cssText='color:var(--purple);font-size:12px;';a.textContent='←';bwd.appendChild(a);}
-  }
-  const concat=document.createElement('div');concat.style.cssText='font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--green);padding:4px 10px;border:1px solid rgba(34,197,94,0.35);border-radius:4px;background:rgba(34,197,94,0.07);opacity:0;transition:opacity 0.4s;';concat.textContent='Output: Concat[h→, h←] per token  →  full bidirectional context';
-  v.appendChild(fwd);v.appendChild(bwd);v.appendChild(concat);
-  await delay(300);fwd.style.opacity='1';await delay(300);bwd.style.opacity='1';await delay(300);concat.style.opacity='1';
-  await delay(400);
-}
-
-async function s6(){
-  const v=document.getElementById('comparisonViz');
-  const rows=[['Property','Vanilla RNN','LSTM','GRU','Transformer'],['Long-range memory','❌ vanishes','✅ cell state','✅ update gate','✅ global attention'],['Training speed','🐌 sequential','🐌 sequential','🐌 sequential','⚡ parallel'],['Parallelisable','❌ No','❌ No','❌ No','✅ Yes'],['Params (rel.)','Low','High','Medium','High'],['Still used in 2025?','Rarely','Embedded/edge','Embedded/edge','✅ Dominant']];
-  const cols=['rgba(100,116,139','rgba(239,68,68','rgba(249,115,22','rgba(234,179,8','rgba(34,197,94'];
-  const table=document.createElement('table');table.style.cssText='border-collapse:collapse;font-family:"JetBrains Mono",monospace;font-size:9px;width:100%;opacity:0;transition:opacity 0.5s;';
-  for(let r=0;r<rows.length;r++){
-    const tr=document.createElement('tr');
-    for(let c=0;c<5;c++){
-      const td=document.createElement(r===0?'th':'td');td.style.cssText='padding:4px 8px;border:1px solid var(--line);';
-      if(r===0)td.style.cssText+='background:rgba(6,182,212,0.1);color:var(--a1);';
-      else if(c===0)td.style.color='var(--dim)';
-      else td.style.color=cols[c-1]+',0.85)';
-      td.textContent=rows[r][c];tr.appendChild(td);
-    }
-    table.appendChild(tr);
-  }
-  v.appendChild(table);await delay(200);table.style.opacity='1';
-  await delay(400);document.getElementById('resultBox').classList.add('show');setIndicator('<span style="color:var(--green);">✅ Complete!</span>');
-}
-
-document.getElementById('btnRun').addEventListener('click',()=>{if(currentStage>=TOTAL-1){resetAll();return;}if(isRunning)return;isRunning=true;syncBtn();currentStage++;scrollToStage(currentStage);runStage(currentStage).then(()=>{isRunning=false;syncBtn();});});
-document.getElementById('btnAuto').addEventListener('click',async()=>{if(isRunning)return;if(currentStage>=TOTAL-1){resetAll();await delay(300);}isRunning=true;syncBtn();while(currentStage<TOTAL-1){currentStage++;scrollToStage(currentStage);await runStage(currentStage);await delay(350);}isRunning=false;syncBtn();});
-document.getElementById('btnReset').addEventListener('click',resetAll);
-document.addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;if(e.code==='Space'||e.code==='ArrowRight'){e.preventDefault();document.getElementById('btnRun').click();}if(e.code==='KeyR'){e.preventDefault();resetAll();}if(e.code==='KeyA'){e.preventDefault();document.getElementById('btnAuto').click();}});
-function resetAll(){isRunning=false;currentStage=-1;syncBtn();document.querySelectorAll('.stage').forEach((s,i)=>{s.classList.remove('active','done');s.style.opacity=i===0?'1':'0.4';});document.getElementById('pf').style.width='0%';setIndicator('Ready');document.getElementById('resultBox').classList.remove('show');['rnnViz','vanishViz','lstmViz','cellViz','gruViz','biRnnViz','comparisonViz'].forEach(id=>{const e=document.getElementById(id);if(e)e.innerHTML='';});}
-(function initOpacity(){document.querySelectorAll('.stage').forEach((s,i)=>{s.style.opacity=i===0?'1':'0.4';});})();
-syncBtn();
-</script>
+<script src="cfg/rnn.js"></script>
+<script src="dl_engine.js"></script>
 </body>
 </html>

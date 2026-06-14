@@ -3,295 +3,46 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MoE — Mixture of Experts</title>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap');
-:root{--bg:#0b0f1a;--bg2:#111827;--line:#1e293b;--muted:#475569;--text:#e2e8f0;--dim:#94a3b8;--blue:#3b82f6;--cyan:#06b6d4;--green:#22c55e;--orange:#f97316;--purple:#a855f7;--pink:#ec4899;--red:#ef4444;--lime:#84cc16;--a1:#f97316;--a2:#fb923c;}
-*{box-sizing:border-box;margin:0;padding:0;}
-body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden;}
-header{text-align:center;padding:24px 20px 12px;position:relative;}
-header::after{content:'';display:block;height:1px;background:linear-gradient(90deg,transparent,var(--a1),var(--purple),transparent);margin-top:14px;opacity:0.5;}
-.nav-back{position:absolute;top:20px;left:20px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);text-decoration:none;border:1px solid var(--line);border-radius:4px;padding:4px 10px;}
-.nav-back:hover{color:var(--a1);}
-.title{font-family:'Bebas Neue',sans-serif;font-size:clamp(24px,4vw,46px);letter-spacing:4px;background:linear-gradient(135deg,var(--a1),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
-.subtitle{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);margin-top:4px;letter-spacing:2px;text-transform:uppercase;}
-.progress-wrap{position:sticky;top:0;z-index:100;background:var(--bg);border-bottom:1px solid var(--line);}
-.progress-track{height:3px;background:var(--line);}.progress-fill{height:100%;background:linear-gradient(90deg,var(--a1),var(--purple));width:0%;transition:width 0.4s;}
-.pipeline{display:flex;flex-direction:column;padding:10px 24px 110px;max-width:1150px;margin:0 auto;}
-.stage{display:grid;grid-template-columns:130px 1fr 250px;gap:0 16px;align-items:center;padding:8px 0;transition:opacity 0.3s;position:relative;}
-.stage-label{text-align:right;padding-right:14px;}
-.stage-num{font-family:'Bebas Neue',sans-serif;font-size:28px;line-height:1;color:var(--muted);transition:color 0.3s;}
-.stage.active .stage-num{color:var(--a1);text-shadow:0 0 10px var(--a1);}.stage.done .stage-num{color:var(--green);}
-.stage-name{font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);}.stage.active .stage-name{color:var(--a2);}
-.sc{background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:12px 16px;transition:border-color 0.3s,box-shadow 0.3s;min-height:82px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;position:relative;overflow:hidden;}
-.stage.active .sc{border-color:rgba(249,115,22,0.45);box-shadow:0 0 22px rgba(249,115,22,0.1);}
-.stage.done .sc{border-color:rgba(34,197,94,0.2);}
-.stage.active .sc::before{content:'';position:absolute;top:-100%;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--a1),var(--purple),transparent);animation:scan 1.8s linear infinite;}
-@keyframes scan{to{top:200%;}}
-.sn{font-size:11px;line-height:1.55;color:var(--dim);}.sn b{color:var(--text);}
-.eq{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a1);background:rgba(249,115,22,0.08);border:1px solid rgba(249,115,22,0.2);padding:2px 8px;border-radius:3px;display:inline-block;margin-top:3px;}
-.conn{display:flex;height:18px;grid-column:1/-1;}.conn-line{width:2px;height:100%;background:var(--line);margin-left:96px;position:relative;overflow:hidden;}
-.cp{position:absolute;top:-20px;left:-3px;width:8px;height:20px;background:linear-gradient(to bottom,transparent,var(--a1),var(--purple));border-radius:4px;opacity:0;}
-.cp.go{animation:fd 0.6s ease-in forwards;}@keyframes fd{0%{top:-20px;opacity:1;}100%{top:100%;opacity:0;}}
-.done-check{position:absolute;top:8px;right:10px;font-size:13px;opacity:0;transition:opacity 0.4s;}.stage.done .done-check{opacity:1;}
-.result-box{margin:0 24px 110px;max-width:1102px;margin-left:auto;margin-right:auto;border:1px solid rgba(34,197,94,0.3);background:rgba(34,197,94,0.05);border-radius:8px;padding:14px 18px;display:none;}
-.result-box.show{display:flex;gap:14px;align-items:center;flex-wrap:wrap;animation:fi 0.5s ease;}
-@keyframes fi{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
-.dock{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:9999;display:flex;align-items:center;gap:10px;padding:9px 16px;background:rgba(10,15,30,0.93);backdrop-filter:blur(16px);border:1px solid rgba(249,115,22,0.35);border-radius:50px;box-shadow:0 8px 40px rgba(0,0,0,0.5);white-space:nowrap;}
-.db{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.8px;padding:6px 14px;border-radius:30px;border:1px solid;cursor:pointer;transition:all 0.18s;text-transform:uppercase;user-select:none;}
-.db:active{transform:scale(0.95);}
-.db-n{background:var(--a1);border-color:var(--a2);color:#000;font-weight:700;}
-.db-n:hover{opacity:0.85;}
-.db-n:disabled{background:#1e293b;border-color:#334155;color:#475569;cursor:not-allowed;}
-.db-a{background:transparent;border-color:var(--purple);color:var(--purple);}
-.db-r{background:transparent;border-color:#334155;color:var(--muted);}
-.db-r:hover{border-color:var(--cyan);color:var(--cyan);}
-.dsep{width:1px;height:20px;background:#1e293b;flex-shrink:0;}
-.dbadge{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a1);background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.25);padding:4px 10px;border-radius:20px;min-width:140px;text-align:center;}
-.dspeed{display:flex;align-items:center;gap:5px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);}
-.dspeed input{width:60px;accent-color:var(--a1);cursor:pointer;}
-.cursor{display:inline-block;animation:blink 1s step-end infinite;}@keyframes blink{50%{opacity:0;}}
-</style>
+<title>MoE — Animated Walkthrough</title>
+<link rel="stylesheet" href="dl_engine.css">
 </head>
 <body>
+<template id="__bundler_thumbnail" data-bg-color="#0b0f1a">
+<svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg"><rect width="1200" height="800" fill="#0b0f1a"/><g transform="translate(600,90)" fill="none"><rect x="-150" y="0" width="300" height="74" rx="14" fill="#0e1322" fill-opacity="1" stroke="#f59e0b" stroke-width="6"/><line x1="0" y1="74" x2="0" y2="120" stroke="#f59e0b" stroke-width="6"/><rect x="-150" y="120" width="300" height="74" rx="14" fill="#0e1322" fill-opacity="1" stroke="#a855f7" stroke-width="6"/><line x1="0" y1="194" x2="0" y2="240" stroke="#a855f7" stroke-width="6"/><rect x="-150" y="240" width="300" height="74" rx="14" fill="#0e1322" fill-opacity="1" stroke="#06b6d4" stroke-width="6"/><line x1="0" y1="314" x2="0" y2="360" stroke="#06b6d4" stroke-width="6"/><rect x="-150" y="360" width="300" height="74" rx="14" fill="#f59e0b" fill-opacity="0.16" stroke="#22c55e" stroke-width="6"/></g><text x="600" y="660" text-anchor="middle" fill="#f59e0b" font-family="monospace" font-size="46" letter-spacing="5">MoE</text><text x="600" y="712" text-anchor="middle" fill="#475569" font-family="monospace" font-size="23" letter-spacing="2">sparse expert routing</text></svg>
+</template>
 <header>
-  <a class="nav-back" href="index.html">← All Diagrams</a>
-  <div class="title">MoE — Mixture of Experts</div>
-  <div class="subtitle">Sparse Gating · Top-K Routing · Scale Without Cost · GPT-4 Architecture</div>
+  <a class="nav-back" href="index.html">← Library</a>
+  <div class="head-titles"><div class="title" id="hTitle">—</div><div class="subtitle" id="hSub">—</div></div>
+  <div class="head-eq" id="hEq">—</div>
 </header>
-<div class="progress-wrap"><div class="progress-track"><div class="progress-fill" id="pf"></div></div></div>
-<div class="pipeline" id="pipeline">
-
-<div class="stage" id="stage-0">
-  <div class="stage-label"><div class="stage-num">01</div><div class="stage-name">Dense vs Sparse</div></div>
-  <div class="sc">
-    <div id="denseVsViz" style="display:flex;gap:12px;align-items:stretch;flex-wrap:wrap;"></div>
-    <div class="sn"><b>The key idea</b><br>Dense: every token uses all FFN params<br>Sparse: each token uses top-2 experts<br><span class="eq">Active params ≪ Total params</span></div>
-    <div class="done-check">✅</div>
+<div class="app" data-mode="start">
+  <div class="archZone" id="archZone">
+    <div class="arch-label">ARCHITECTURE · YOU ARE HERE</div>
+    <div class="arch" id="arch"></div>
+    <div class="start-hint">▶ press Begin to walk through the architecture, block by block</div>
   </div>
-  <div class="sn" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">GPT-4: ~1.8T<br>total params<br>~220B active<br>per token</span></div>
-</div>
-<div class="conn"><div class="conn-line"><div class="cp" id="cp0"></div></div></div>
-
-<div class="stage" id="stage-1">
-  <div class="stage-label"><div class="stage-num">02</div><div class="stage-name">Expert Pool</div></div>
-  <div class="sc">
-    <div id="expertPoolViz" style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;"></div>
-    <div class="sn"><b>N independent FFN experts</b><br>Each expert = standard FFN block<br>Mixtral-8×7B: 8 experts per layer<br><span class="eq">Expert_i = FFN_i(x) = W₂·GeLU(W₁·x)</span></div>
-    <div class="done-check">✅</div>
+  <div class="stageZone" id="stageZone">
+    <svg id="scene" viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid meet"></svg>
+    <div class="caption" id="caption">
+      <div class="cap-eyebrow" id="capEye">Step</div>
+      <div class="cap-title" id="capTitle">—</div>
+      <div class="cap-body" id="capBody">—</div>
+      <div class="cap-eq" id="capEq"></div>
+    </div>
   </div>
-  <div class="sn" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">Each expert<br>specialises in<br>different types<br>of knowledge</span></div>
 </div>
-<div class="conn"><div class="conn-line"><div class="cp" id="cp1"></div></div></div>
-
-<div class="stage" id="stage-2">
-  <div class="stage-label"><div class="stage-num">03</div><div class="stage-name">Router / Gate</div></div>
-  <div class="sc">
-    <div id="routerViz" style="display:flex;flex-direction:column;gap:5px;min-width:320px;"></div>
-    <div class="sn"><b>Learned gating network</b><br>Linear layer: d_model → N scores<br>Softmax → select top-k experts<br><span class="eq">G(x) = softmax(TopK(x·W_g))</span></div>
-    <div class="done-check">✅</div>
-  </div>
-  <div class="sn" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">Top-k=2<br>most common<br>Top-1 also<br>used (Switch)</span></div>
-</div>
-<div class="conn"><div class="conn-line"><div class="cp" id="cp2"></div></div></div>
-
-<div class="stage" id="stage-3">
-  <div class="stage-label"><div class="stage-num">04</div><div class="stage-name">Sparse Dispatch</div></div>
-  <div class="sc">
-    <div id="dispatchViz" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;"></div>
-    <div class="sn"><b>Route each token to top-2 experts</b><br>Other experts: zero contribution<br>Only 2/8 FFN blocks compute<br><span class="eq">y = Σᵢ G_i(x)·Expert_i(x)  (sparse!)</span></div>
-    <div class="done-check">✅</div>
-  </div>
-  <div class="sn" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">Requires<br>custom CUDA<br>kernels for<br>efficiency</span></div>
-</div>
-<div class="conn"><div class="conn-line"><div class="cp" id="cp3"></div></div></div>
-
-<div class="stage" id="stage-4">
-  <div class="stage-label"><div class="stage-num">05</div><div class="stage-name">Load Balancing</div></div>
-  <div class="sc">
-    <div id="lbViz" style="display:flex;flex-direction:column;gap:5px;min-width:320px;"></div>
-    <div class="sn"><b>Auxiliary loss prevents collapse</b><br>Without it: all tokens → 1 expert<br>Enforce roughly equal load per expert<br><span class="eq">L_aux = α · N · Σᵢ fᵢ · Pᵢ</span></div>
-    <div class="done-check">✅</div>
-  </div>
-  <div class="sn" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">Expert collapse<br>= all capacity<br>wasted on<br>one expert</span></div>
-</div>
-<div class="conn"><div class="conn-line"><div class="cp" id="cp4"></div></div></div>
-
-<div class="stage" id="stage-5">
-  <div class="stage-label"><div class="stage-num">06</div><div class="stage-name">Weighted Combine</div></div>
-  <div class="sc">
-    <div id="combineViz" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;"></div>
-    <div class="sn"><b>Gate weights blend expert outputs</b><br>Weighted sum of activated experts<br>Single output vector per token<br><span class="eq">y = g₁·E₁(x) + g₂·E₂(x)</span></div>
-    <div class="done-check">✅</div>
-  </div>
-  <div class="sn" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">Gate weights<br>sum to 1.0<br>continuous<br>blending</span></div>
-</div>
-<div class="conn"><div class="conn-line"><div class="cp" id="cp5"></div></div></div>
-
-<div class="stage" id="stage-6">
-  <div class="stage-label"><div class="stage-num">07</div><div class="stage-name">Scaling Advantage</div></div>
-  <div class="sc">
-    <div id="scalingViz" style="overflow-x:auto;width:100%;"></div>
-    <div class="sn"><b>More params, same FLOPS</b><br>Total params grow with N experts<br>Active params stay constant<br><span class="eq">Cost(MoE) ≈ Cost(1/N × dense)</span></div>
-    <div class="done-check">✅</div>
-  </div>
-  <div class="sn" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">Mixtral-8×7B<br>beats Llama-2<br>70B at 1/6th<br>the cost!</span></div>
-</div>
-
-</div>
-
-<div class="result-box" id="resultBox">
-  <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;color:var(--green);">✅ MoE Forward Pass Complete</div>
-  <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text);">Each token routed to top-2 of 8 experts → weighted sum → output</div>
-  <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--a1);background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.3);padding:3px 10px;border-radius:4px;">Scale params × N · Keep FLOPS constant · Sparse = efficient</div>
-</div>
-
+<div class="takeaways" id="takeaways"></div>
 <div class="dock">
-  <button class="db db-n" id="btnRun">▶ Next Step</button>
-  <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#334155;border:1px solid #1e293b;border-radius:3px;padding:1px 5px;">Space</span>
-  <div class="dsep"></div><button class="db db-a" id="btnAuto">⚡ Auto</button>
-  <div class="dsep"></div><div class="dbadge" id="stepIndicator">Ready<span class="cursor">_</span></div>
+  <button class="db db-p" id="btnPrev">‹ Prev</button>
+  <button class="db db-n" id="btnNext">▶ Begin</button>
+  <span class="kbd">Space</span><div class="dsep"></div>
+  <button class="db db-a" id="btnAuto">⚡ Auto</button><div class="dsep"></div>
+  <div class="dbadge" id="indicator">Ready<span class="cursor">_</span></div><div class="dsep"></div>
+  <div class="dspeed"><span>Speed</span><input type="range" id="speed" min="0.5" max="2.5" step="0.5" value="1"><span id="speedLbl">1×</span></div>
   <div class="dsep"></div>
-  <div class="dspeed"><span>Speed</span><input type="range" id="speedSlider" min="0.5" max="3" step="0.5" value="0.5"><span id="speedLabel">0.5×</span></div>
-  <div class="dsep"></div><button class="db db-r" id="btnReset">↺</button>
+  <button class="db db-r" id="btnReset">↺ Reset</button>
 </div>
-
-<script>
-let currentStage=-1,isRunning=false,speed=0.5;const TOTAL=7;
-document.getElementById('speedSlider').addEventListener('input',e=>{speed=parseFloat(e.target.value);document.getElementById('speedLabel').textContent=speed+'×';});
-function delay(ms){return new Promise(r=>setTimeout(r,ms/speed));}
-function scrollToStage(idx){const el=document.getElementById('stage-'+idx);if(!el)return;window.scrollTo({top:Math.max(0,window.pageYOffset+el.getBoundingClientRect().top-window.innerHeight/2+el.offsetHeight/2),behavior:'smooth'});}
-function syncBtn(){const b=document.getElementById('btnRun');if(currentStage>=TOTAL-1){b.textContent='↺ Restart';b.disabled=false;}else{b.innerHTML='▶ Next Step';b.disabled=isRunning;}}
-function setIndicator(html){document.getElementById('stepIndicator').innerHTML=html+'<span class="cursor">_</span>';}
-function fillProgress(){document.getElementById('pf').style.width=((currentStage+1)/TOTAL*100)+'%';}
-function pulse(id){const e=document.getElementById(id);if(e){e.classList.add('go');setTimeout(()=>e.classList.remove('go'),700);}}
-async function runStage(idx){
-  document.querySelectorAll('.stage').forEach((s,i)=>{
-    if(i===idx)s.style.opacity='1';
-    else if(s.classList.contains('done'))s.style.opacity='0.75';
-    else s.style.opacity='0.4';
-  });
-  const el=document.getElementById('stage-'+idx);el.classList.add('active');
-  setIndicator('<span style="color:var(--a1);">Stage '+(idx+1)+'/7</span>');fillProgress();
-  if(idx===0)await s0();else if(idx===1)await s1();else if(idx===2)await s2();else if(idx===3)await s3();else if(idx===4)await s4();else if(idx===5)await s5();else if(idx===6)await s6();
-  el.classList.remove('active');el.classList.add('done');el.style.opacity='0.75';pulse('cp'+idx);
-}
-async function s0(){
-  const v=document.getElementById('denseVsViz');v.innerHTML='';
-  const cards=[
-    {title:'Dense FFN',sub:'Every token uses ALL params',detail:'7B FFN → 7B active per token',c:'rgba(100,116,139',active:false},
-    {title:'Sparse MoE',sub:'Each token uses TOP-2 experts',detail:'56B FFN → ~7B active per token ⚡',c:'rgba(249,115,22',active:true},
-  ];
-  for(const card of cards){
-    const d=document.createElement('div');d.style.cssText='border:1px solid '+card.c+',0.4);border-radius:5px;padding:8px 12px;background:'+card.c+',0.07);min-width:150px;flex:1;opacity:0;transition:opacity 0.4s;';
-    d.innerHTML='<div style="font-family:\'JetBrains Mono\',monospace;font-size:11px;color:'+card.c+',0.9);font-weight:700;margin-bottom:4px;">'+(card.active?'⚡ ':'')+card.title+'</div><div style="font-family:\'JetBrains Mono\',monospace;font-size:9px;color:var(--muted);">'+card.sub+'</div><div style="font-family:\'JetBrains Mono\',monospace;font-size:9px;color:'+card.c+',0.7);margin-top:4px;">'+card.detail+'</div>';
-    v.appendChild(d);await delay(300);d.style.opacity='1';
-  }
-  await delay(300);
-}
-async function s1(){
-  const v=document.getElementById('expertPoolViz');v.innerHTML='';
-  const expertCols=['#3b82f6','#06b6d4','#22c55e','#a855f7','#f97316','#ec4899','#eab308','#ef4444'];
-  for(let i=0;i<8;i++){
-    const d=document.createElement('div');d.style.cssText='border:1px solid;border-radius:4px;padding:5px 8px;font-family:"JetBrains Mono",monospace;font-size:10px;text-align:center;opacity:0;transition:all 0.3s;';
-    d.style.borderColor=expertCols[i];d.style.color=expertCols[i];d.style.background='rgba(0,0,0,0.3)';
-    d.innerHTML='E'+(i+1)+'<br><span style="font-size:8px;color:var(--muted);">FFN specialist</span>';v.appendChild(d);
-    await delay(100);d.style.opacity='1';
-  }
-  await delay(300);
-}
-async function s2(){
-  const v=document.getElementById('routerViz');v.innerHTML='';
-  const header=document.createElement('div');header.style.cssText='font-family:"JetBrains Mono",monospace;font-size:9px;color:var(--muted);margin-bottom:4px;';header.textContent='Router scores for token "Paris":';v.appendChild(header);
-  const scores=[{e:'E1',s:0.12,active:false},{e:'E2',s:0.08,active:false},{e:'E3',s:0.41,active:true},{e:'E4',s:0.06,active:false},{e:'E5',s:0.09,active:false},{e:'E6',s:0.03,active:false},{e:'E7',s:0.37,active:true},{e:'E8',s:0.05,active:false}];
-  const row=document.createElement('div');row.style.cssText='display:flex;gap:4px;align-items:flex-end;opacity:0;transition:opacity 0.4s;';
-  for(const s of scores){
-    const w=document.createElement('div');w.style.cssText='display:flex;flex-direction:column;align-items:center;gap:2px;';
-    const bar=document.createElement('div');bar.style.cssText='width:22px;border-radius:2px 2px 0 0;transition:height 0.5s cubic-bezier(0.34,1.56,0.64,1);';
-    bar.style.height='2px';
-    bar.style.background=s.active?'var(--a1)':'rgba(100,116,139,0.4)';
-    if(s.active)bar.style.boxShadow='0 0 8px var(--a1)';
-    const val=document.createElement('div');val.style.cssText='font-family:"JetBrains Mono",monospace;font-size:8px;color:'+(s.active?'var(--a1)':'var(--muted)')+';';val.textContent=s.s.toFixed(2);
-    const lbl=document.createElement('div');lbl.style.cssText='font-family:"JetBrains Mono",monospace;font-size:8px;color:'+(s.active?'var(--a1)':'var(--muted)')+';';lbl.textContent=s.e+(s.active?'⭐':'');
-    w.appendChild(bar);w.appendChild(val);w.appendChild(lbl);row.appendChild(w);
-  }
-  v.appendChild(row);await delay(200);row.style.opacity='1';
-  await delay(200);
-  for(const w of row.children){
-    const bar=w.children[0];const idx=Array.from(row.children).indexOf(w);
-    bar.style.height=(scores[idx].s*60)+'px';
-  }
-  await delay(400);
-}
-async function s3(){
-  const v=document.getElementById('dispatchViz');v.innerHTML='';
-  const tok=document.createElement('div');tok.style.cssText='border:1.5px solid rgba(249,115,22,0.5);border-radius:3px;padding:5px 10px;font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--a1);background:rgba(249,115,22,0.1);opacity:0;transition:opacity 0.4s;';tok.textContent='"Paris"';v.appendChild(tok);await delay(200);tok.style.opacity='1';
-  const arr=document.createElement('span');arr.style.cssText='font-size:18px;color:var(--muted);align-self:center;';arr.textContent='→';v.appendChild(arr);
-  const experts=document.createElement('div');experts.style.cssText='display:flex;flex-direction:column;gap:4px;';
-  const active=[{name:'E3 (Geography expert)',w:'0.41',c:'rgba(249,115,22'},{name:'E7 (Facts expert)',w:'0.37',c:'rgba(168,85,247'}];
-  const inactive=['E1','E2','E4','E5','E6','E8'];
-  for(const e of active){const d=document.createElement('div');d.style.cssText='border:1px solid '+e.c+',0.5);border-radius:3px;padding:3px 8px;font-family:"JetBrains Mono",monospace;font-size:9px;color:'+e.c+',0.9);background:'+e.c+',0.1);opacity:0;transition:opacity 0.4s;';d.textContent='✓ '+e.name+'  g='+e.w;experts.appendChild(d);await delay(250);d.style.opacity='1';}
-  const skip=document.createElement('div');skip.style.cssText='font-family:"JetBrains Mono",monospace;font-size:9px;color:var(--muted);opacity:0;transition:opacity 0.4s;';skip.textContent='✗ '+inactive.join(', ')+' — skipped (0)';experts.appendChild(skip);v.appendChild(experts);await delay(200);skip.style.opacity='1';
-  await delay(300);
-}
-async function s4(){
-  const v=document.getElementById('lbViz');v.innerHTML='';
-  const header=document.createElement('div');header.style.cssText='font-family:"JetBrains Mono",monospace;font-size:9px;color:var(--muted);';header.textContent='Token distribution across experts (1000 tokens):';v.appendChild(header);
-  const loads=[{e:'E1',n:128,c:'#3b82f6'},{e:'E2',n:121,c:'#06b6d4'},{e:'E3',n:134,c:'#22c55e'},{e:'E4',n:119,c:'#a855f7'},{e:'E5',n:125,c:'#f97316'},{e:'E6',n:122,c:'#ec4899'},{e:'E7',n:130,c:'#eab308'},{e:'E8',n:121,c:'#ef4444'}];
-  const row=document.createElement('div');row.style.cssText='display:flex;gap:4px;align-items:flex-end;height:50px;margin-top:5px;opacity:0;transition:opacity 0.4s;';
-  for(const l of loads){
-    const w=document.createElement('div');w.style.cssText='display:flex;flex-direction:column;align-items:center;gap:2px;';
-    const bar=document.createElement('div');bar.style.cssText='width:22px;height:2px;border-radius:2px 2px 0 0;background:'+l.c+';transition:height 0.5s cubic-bezier(0.34,1.56,0.64,1);';
-    const lbl=document.createElement('div');lbl.style.cssText='font-family:"JetBrains Mono",monospace;font-size:8px;color:var(--muted);';lbl.textContent=l.e;
-    w.appendChild(bar);w.appendChild(lbl);row.appendChild(w);
-  }
-  v.appendChild(row);await delay(200);row.style.opacity='1';
-  await delay(200);
-  for(let i=0;i<row.children.length;i++){const bar=row.children[i].children[0];bar.style.height=(loads[i].n/134*44)+'px';}
-  const note=document.createElement('div');note.style.cssText='font-family:"JetBrains Mono",monospace;font-size:9px;color:var(--green);opacity:0;transition:opacity 0.4s;margin-top:4px;';note.textContent='✓ Balanced! Auxiliary loss L_aux working correctly.';v.appendChild(note);await delay(600);note.style.opacity='1';
-  await delay(300);
-}
-async function s5(){
-  const v=document.getElementById('combineViz');v.innerHTML='';
-  const parts=[
-    {t:'0.41 × E3(x)','c':'rgba(249,115,22'},
-    {t:'+','plain':true},
-    {t:'0.37 × E7(x)','c':'rgba(168,85,247'},
-    {t:'=','plain':true},
-    {t:'y (output)','c':'rgba(34,197,94','bold':true},
-  ];
-  for(const p of parts){
-    if(p.plain){const s=document.createElement('span');s.style.cssText='font-size:18px;color:var(--muted);align-self:center;margin:0 3px;';s.textContent=p.t;v.appendChild(s);}
-    else{const d=document.createElement('div');d.style.cssText='border:1px solid '+p.c+',0.5);border-radius:4px;padding:5px 10px;font-family:"JetBrains Mono",monospace;font-size:10px;color:'+p.c+',0.9);background:'+p.c+',0.08);opacity:0;transition:opacity 0.4s;'+(p.bold?'font-weight:700;':'');d.textContent=p.t;v.appendChild(d);await delay(280);d.style.opacity='1';}
-  }
-  await delay(300);
-}
-async function s6(){
-  const v=document.getElementById('scalingViz');
-  const rows=[['Model','Total Params','Active / token','Quality vs Cost'],['Llama-2 7B','7B','7B','baseline'],['Llama-2 70B','70B','70B','better, 10× cost'],['Mixtral-8×7B','56B','~13B','beats Llama-2 70B, 5× faster ⭐'],['GPT-4 (est.)','~1.8T','~220B','frontier, same cost as 220B dense']];
-  const table=document.createElement('table');table.style.cssText='border-collapse:collapse;font-family:"JetBrains Mono",monospace;font-size:9px;width:100%;opacity:0;transition:opacity 0.5s;';
-  for(let r=0;r<rows.length;r++){
-    const tr=document.createElement('tr');
-    for(let c=0;c<4;c++){
-      const td=document.createElement(r===0?'th':'td');td.style.cssText='padding:4px 8px;border:1px solid var(--line);';
-      if(r===0)td.style.cssText+='background:rgba(249,115,22,0.1);color:var(--a1);';
-      else if(r===3)td.style.cssText+='color:var(--green);background:rgba(34,197,94,0.05);';
-      else if(c===0)td.style.color='var(--text)';
-      else td.style.color='var(--dim)';
-      td.textContent=rows[r][c];tr.appendChild(td);
-    }
-    table.appendChild(tr);
-  }
-  v.appendChild(table);await delay(200);table.style.opacity='1';
-  await delay(400);document.getElementById('resultBox').classList.add('show');setIndicator('<span style="color:var(--green);">✅ Complete!</span>');
-}
-document.getElementById('btnRun').addEventListener('click',()=>{if(currentStage>=TOTAL-1){resetAll();return;}if(isRunning)return;isRunning=true;syncBtn();currentStage++;scrollToStage(currentStage);runStage(currentStage).then(()=>{isRunning=false;syncBtn();});});
-document.getElementById('btnAuto').addEventListener('click',async()=>{if(isRunning)return;if(currentStage>=TOTAL-1){resetAll();await delay(300);}isRunning=true;syncBtn();while(currentStage<TOTAL-1){currentStage++;scrollToStage(currentStage);await runStage(currentStage);await delay(350);}isRunning=false;syncBtn();});
-document.getElementById('btnReset').addEventListener('click',resetAll);
-document.addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;if(e.code==='Space'||e.code==='ArrowRight'){e.preventDefault();document.getElementById('btnRun').click();}if(e.code==='KeyR'){e.preventDefault();resetAll();}if(e.code==='KeyA'){e.preventDefault();document.getElementById('btnAuto').click();}});
-function resetAll(){isRunning=false;currentStage=-1;syncBtn();document.querySelectorAll('.stage').forEach((s,i)=>{s.classList.remove('active','done');s.style.opacity=i===0?'1':'0.4';});document.getElementById('pf').style.width='0%';setIndicator('Ready');document.getElementById('resultBox').classList.remove('show');['denseVsViz','expertPoolViz','routerViz','dispatchViz','lbViz','combineViz','scalingViz'].forEach(id=>{const e=document.getElementById(id);if(e)e.innerHTML='';});}
-(function initOpacity(){document.querySelectorAll('.stage').forEach((s,i)=>{s.style.opacity=i===0?'1':'0.4';});})();
-syncBtn();
-</script>
+<script src="cfg/moe.js"></script>
+<script src="dl_engine.js"></script>
 </body>
 </html>

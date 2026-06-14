@@ -3,333 +3,234 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Attention Mechanism — Q, K, V, Scaled Dot-Product</title>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap');
-:root{--bg:#0b0f1a;--bg2:#111827;--line:#1e293b;--muted:#475569;--text:#e2e8f0;--dim:#94a3b8;--blue:#3b82f6;--blue2:#60a5fa;--cyan:#06b6d4;--green:#22c55e;--orange:#f97316;--purple:#a855f7;--pink:#ec4899;--yellow:#eab308;--a1:#f59e0b;--a2:#fbbf24;}
-*{box-sizing:border-box;margin:0;padding:0;}
-body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden;}
-header{text-align:center;padding:24px 20px 12px;position:relative;}
-header::after{content:'';display:block;height:1px;background:linear-gradient(90deg,transparent,var(--a1),var(--orange),transparent);margin-top:14px;opacity:0.5;}
-.nav-back{position:absolute;top:20px;left:20px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);text-decoration:none;border:1px solid var(--line);border-radius:4px;padding:4px 10px;transition:color 0.2s,border-color 0.2s;}
-.nav-back:hover{color:var(--a1);border-color:var(--a1);}
-.title{font-family:'Bebas Neue',sans-serif;font-size:clamp(24px,4vw,46px);letter-spacing:4px;background:linear-gradient(135deg,var(--a1),var(--orange));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
-.subtitle{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);margin-top:4px;letter-spacing:2px;text-transform:uppercase;}
-.progress-wrap{position:sticky;top:0;z-index:100;background:var(--bg);border-bottom:1px solid var(--line);}
-.progress-track{height:3px;background:var(--line);}.progress-fill{height:100%;background:linear-gradient(90deg,var(--a1),var(--orange));width:0%;transition:width 0.4s;}
-.pipeline{display:flex;flex-direction:column;padding:10px 24px 110px;max-width:1150px;margin:0 auto;}
-.stage{display:grid;grid-template-columns:130px 1fr 250px;gap:0 16px;align-items:center;padding:8px 0;transition:opacity 0.3s;position:relative;}
-.stage-label{text-align:right;padding-right:14px;}
-.stage-num{font-family:'Bebas Neue',sans-serif;font-size:28px;line-height:1;color:var(--muted);transition:color 0.3s;}
-.stage.active .stage-num{color:var(--a1);text-shadow:0 0 10px var(--a1);}.stage.done .stage-num{color:var(--green);}
-.stage-name{font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);}.stage.active .stage-name{color:var(--a2);}
-.sc{background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:12px 16px;transition:border-color 0.3s,box-shadow 0.3s;min-height:82px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;position:relative;overflow:hidden;}
-.stage.active .sc{border-color:rgba(245,158,11,0.45);box-shadow:0 0 22px rgba(245,158,11,0.1);}
-.stage.done .sc{border-color:rgba(34,197,94,0.2);}
-.stage.active .sc::before{content:'';position:absolute;top:-100%;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--a1),var(--orange),transparent);animation:scan 1.8s linear infinite;}
-@keyframes scan{to{top:200%;}}
-.sn{font-size:11px;line-height:1.55;color:var(--dim);}.sn b{color:var(--text);}
-.eq{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a1);background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);padding:2px 8px;border-radius:3px;display:inline-block;margin-top:3px;}
-.conn{display:flex;height:18px;grid-column:1/-1;}.conn-line{width:2px;height:100%;background:var(--line);margin-left:96px;position:relative;overflow:hidden;}
-.cp{position:absolute;top:-20px;left:-3px;width:8px;height:20px;background:linear-gradient(to bottom,transparent,var(--a1),var(--orange));border-radius:4px;opacity:0;}
-.cp.go{animation:fd 0.6s ease-in forwards;}@keyframes fd{0%{top:-20px;opacity:1;}100%{top:100%;opacity:0;}}
-.done-check{position:absolute;top:8px;right:10px;font-size:13px;opacity:0;transition:opacity 0.4s;}.stage.done .done-check{opacity:1;}
-.result-box{margin:0 24px 110px;max-width:1102px;margin-left:auto;margin-right:auto;border:1px solid rgba(34,197,94,0.3);background:rgba(34,197,94,0.05);border-radius:8px;padding:14px 18px;display:none;}
-.result-box.show{display:flex;gap:14px;align-items:center;flex-wrap:wrap;animation:fi 0.5s ease;}
-@keyframes fi{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
-.dock{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:9999;display:flex;align-items:center;gap:10px;padding:9px 16px;background:rgba(10,15,30,0.93);backdrop-filter:blur(16px);border:1px solid rgba(245,158,11,0.35);border-radius:50px;box-shadow:0 8px 40px rgba(0,0,0,0.5);white-space:nowrap;}
-.db{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.8px;padding:6px 14px;border-radius:30px;border:1px solid;cursor:pointer;transition:all 0.18s;text-transform:uppercase;user-select:none;}
-.db:active{transform:scale(0.95);}
-.db-n{background:var(--a1);border-color:var(--a2);color:#000;font-weight:700;}
-.db-n:hover{opacity:0.85;box-shadow:0 0 16px rgba(245,158,11,0.4);}
-.db-n:disabled{background:#1e293b;border-color:#334155;color:#475569;cursor:not-allowed;}
-.db-a{background:transparent;border-color:var(--orange);color:var(--orange);}
-.db-r{background:transparent;border-color:#334155;color:var(--muted);}
-.db-r:hover{border-color:var(--cyan);color:var(--cyan);}
-.dsep{width:1px;height:20px;background:#1e293b;flex-shrink:0;}
-.dbadge{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a1);background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.25);padding:4px 10px;border-radius:20px;min-width:140px;text-align:center;}
-.dspeed{display:flex;align-items:center;gap:5px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);}
-.dspeed input{width:60px;accent-color:var(--a1);cursor:pointer;}
-.cursor{display:inline-block;animation:blink 1s step-end infinite;}@keyframes blink{50%{opacity:0;}}
-.tok{display:inline-block;border:1.5px solid;border-radius:3px;padding:2px 8px;font-size:10px;font-family:'JetBrains Mono',monospace;margin:2px;opacity:0;transform:translateY(5px);transition:opacity 0.3s,transform 0.3s;}
-.tok.show{opacity:1;transform:translateY(0);}
-</style>
+<title>Attention Mechanism — Animated Walkthrough</title>
+<link rel="stylesheet" href="dl_engine.css">
 </head>
 <body>
+<template id="__bundler_thumbnail" data-bg-color="#0b0f1a">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="800" fill="#0b0f1a"/>
+    <g transform="translate(600,110)" fill="none" stroke="#f59e0b" stroke-width="6">
+      <rect x="-150" y="0" width="300" height="70" rx="14" fill="#0e1322"/>
+      <line x1="0" y1="70" x2="0" y2="120"/>
+      <rect x="-150" y="120" width="300" height="70" rx="14" fill="#0e1322" stroke="#a855f7"/>
+      <line x1="0" y1="190" x2="0" y2="240"/>
+      <rect x="-150" y="240" width="300" height="70" rx="14" fill="#0e1322" stroke="#22c55e"/>
+      <line x1="0" y1="310" x2="0" y2="360"/>
+      <rect x="-150" y="360" width="300" height="70" rx="14" fill="rgba(34,197,94,0.12)" stroke="#22c55e"/>
+    </g>
+    <text x="600" y="640" text-anchor="middle" fill="#f59e0b" font-family="monospace" font-size="46" letter-spacing="6">ATTENTION</text>
+    <text x="600" y="694" text-anchor="middle" fill="#475569" font-family="monospace" font-size="24" letter-spacing="3">softmax(Q·Kᵀ/√d)·V</text>
+  </svg>
+</template>
 <header>
-  <a class="nav-back" href="index.html">← All Diagrams</a>
-  <div class="title">Attention Mechanism</div>
-  <div class="subtitle">Query · Key · Value · Scaled Dot-Product · Multi-Head · Before Transformer</div>
+  <a class="nav-back" href="index.html">← Library</a>
+  <div class="head-titles"><div class="title" id="hTitle">—</div><div class="subtitle" id="hSub">—</div></div>
+  <div class="head-eq" id="hEq">—</div>
 </header>
-<div class="progress-wrap"><div class="progress-track"><div class="progress-fill" id="pf"></div></div></div>
-<div class="pipeline" id="pipeline">
-
-<div class="stage" id="stage-0">
-  <div class="stage-label"><div class="stage-num">01</div><div class="stage-name">The Core Idea</div></div>
-  <div class="sc">
-    <div id="ideaViz" style="display:flex;flex-direction:column;gap:5px;"></div>
-    <div class="sn"><b>Attention = learned relevance</b><br>Each word asks: "which other words<br>should I focus on to understand myself?"<br><span class="eq">"bank" needs context to know its meaning</span></div>
-    <div class="done-check">✅</div>
+<div class="app" data-mode="start">
+  <div class="archZone" id="archZone">
+    <div class="arch-label">ARCHITECTURE · YOU ARE HERE</div>
+    <div class="arch" id="arch"></div>
+    <div class="start-hint">▶ press Begin to walk through the architecture, block by block</div>
   </div>
-  <div class="sn" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">Introduced in<br>Bahdanau 2014<br>for seq2seq<br>translation</span></div>
-</div>
-<div class="conn"><div class="conn-line"><div class="cp" id="cp0"></div></div></div>
-
-<div class="stage" id="stage-1">
-  <div class="stage-label"><div class="stage-num">02</div><div class="stage-name">Q, K, V Projections</div></div>
-  <div class="sc">
-    <div id="qkvViz" style="display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap;"></div>
-    <div class="sn"><b>Three linear projections</b><br>Q = "what am I looking for?"<br>K = "what do I contain?"<br>V = "what do I offer?"<br><span class="eq">Q=xW_Q  K=xW_K  V=xW_V</span></div>
-    <div class="done-check">✅</div>
-  </div>
-  <div class="sn" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">W_Q, W_K, W_V<br>are learned<br>during training<br>d_k = d/h</span></div>
-</div>
-<div class="conn"><div class="conn-line"><div class="cp" id="cp1"></div></div></div>
-
-<div class="stage" id="stage-2">
-  <div class="stage-label"><div class="stage-num">03</div><div class="stage-name">Dot-Product Scores</div></div>
-  <div class="sc">
-    <div id="dotViz" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;"></div>
-    <div class="sn"><b>Q · Kᵀ = similarity scores</b><br>Each Q dot-products with all Ks<br>High score = high relevance<br><span class="eq">score(Q,K) = Q · Kᵀ</span></div>
-    <div class="done-check">✅</div>
-  </div>
-  <div class="sn" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">Cosine similarity<br>in high-dim<br>space — angle<br>= relatedness</span></div>
-</div>
-<div class="conn"><div class="conn-line"><div class="cp" id="cp2"></div></div></div>
-
-<div class="stage" id="stage-3">
-  <div class="stage-label"><div class="stage-num">04</div><div class="stage-name">Scale + Softmax</div></div>
-  <div class="sc">
-    <div id="scaleViz" style="display:flex;flex-direction:column;gap:6px;min-width:320px;"></div>
-    <div class="sn"><b>Divide by √d_k then softmax</b><br>Without scale: large d_k → tiny gradients<br>Softmax converts scores → probabilities<br><span class="eq">softmax(Q·Kᵀ / √d_k)</span></div>
-    <div class="done-check">✅</div>
-  </div>
-  <div class="sn" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">√d_k prevents<br>softmax from<br>saturating in<br>high dimensions</span></div>
-</div>
-<div class="conn"><div class="conn-line"><div class="cp" id="cp3"></div></div></div>
-
-<div class="stage" id="stage-4">
-  <div class="stage-label"><div class="stage-num">05</div><div class="stage-name">Attention Weights</div></div>
-  <div class="sc">
-    <div>
-      <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:5px;">Sentence: "The bank by the river"</div>
-      <div id="attnMapViz" style="display:grid;gap:2px;"></div>
-      <div id="attnLabels" style="display:flex;gap:2px;margin-top:3px;"></div>
+  <div class="stageZone" id="stageZone">
+    <svg id="scene" viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid meet"></svg>
+    <div class="caption" id="caption">
+      <div class="cap-eyebrow" id="capEye">Step</div>
+      <div class="cap-title" id="capTitle">—</div>
+      <div class="cap-body" id="capBody">—</div>
+      <div class="cap-eq" id="capEq"></div>
     </div>
-    <div class="sn"><b>Where each word looks</b><br>"bank" strongly attends to "river"<br>→ it's a river bank, not a financial bank<br><span class="eq">Rows sum to 1.0 (softmax)</span></div>
-    <div class="done-check">✅</div>
   </div>
-  <div class="sn" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">This is why<br>attention solves<br>word sense<br>disambiguation</span></div>
 </div>
-<div class="conn"><div class="conn-line"><div class="cp" id="cp4"></div></div></div>
-
-<div class="stage" id="stage-5">
-  <div class="stage-label"><div class="stage-num">06</div><div class="stage-name">Weighted Sum of V</div></div>
-  <div class="sc">
-    <div id="weightedVViz" style="display:flex;flex-direction:column;gap:5px;min-width:320px;"></div>
-    <div class="sn"><b>Multiply weights × V vectors</b><br>Context-aware representation per token<br>"bank" output is a mix of "bank"+"river"<br><span class="eq">Output = Attention_Weights · V</span></div>
-    <div class="done-check">✅</div>
-  </div>
-  <div class="sn" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">Full formula:<br>Attn(Q,K,V)<br>= softmax(QKᵀ<br>/√d_k)·V</span></div>
-</div>
-<div class="conn"><div class="conn-line"><div class="cp" id="cp5"></div></div></div>
-
-<div class="stage" id="stage-6">
-  <div class="stage-label"><div class="stage-num">07</div><div class="stage-name">Multi-Head Attention</div></div>
-  <div class="sc">
-    <div id="multiHeadViz" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;"></div>
-    <div class="sn"><b>Run h attention heads in parallel</b><br>Each head learns different patterns<br>Head 1: syntax, Head 2: coreference…<br><span class="eq">MHA = Concat(head₁…headₕ)·W_O</span></div>
-    <div class="done-check">✅</div>
-  </div>
-  <div class="sn" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">h=8 (base)<br>d_k = d/h = 64<br>Total params<br>same as 1 head</span></div>
-</div>
-<div class="conn"><div class="conn-line"><div class="cp" id="cp6"></div></div></div>
-
-<div class="stage" id="stage-7">
-  <div class="stage-label"><div class="stage-num">08</div><div class="stage-name">Full Formula</div></div>
-  <div class="sc">
-    <div id="fullFormulaViz" style="display:flex;flex-direction:column;gap:6px;min-width:340px;"></div>
-    <div class="sn"><b>Everything together</b><br>O(n²) per layer — main bottleneck<br>Enables parallelism unlike RNNs<br><span class="eq">This is the heart of every LLM!</span></div>
-    <div class="done-check">✅</div>
-  </div>
-  <div class="sn" style="padding:4px 0;"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">Flash Attention<br>reduces memory<br>O(n²)→O(n)<br>same output</span></div>
-</div>
-
-</div>
-
-<div class="result-box" id="resultBox">
-  <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;color:var(--green);">✅ Attention Mechanism Complete</div>
-  <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text);">Q·Kᵀ/√d_k → softmax → ×V → contextual embeddings</div>
-  <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--a1);background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);padding:3px 10px;border-radius:4px;">Foundation of Transformer · BERT · GPT · ViT · and every modern LLM</div>
-</div>
-
+<div class="takeaways" id="takeaways"></div>
 <div class="dock">
-  <button class="db db-n" id="btnRun">▶ Next Step</button>
-  <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#334155;border:1px solid #1e293b;border-radius:3px;padding:1px 5px;">Space</span>
-  <div class="dsep"></div><button class="db db-a" id="btnAuto">⚡ Auto</button>
-  <div class="dsep"></div><div class="dbadge" id="stepIndicator">Ready<span class="cursor">_</span></div>
+  <button class="db db-p" id="btnPrev">‹ Prev</button>
+  <button class="db db-n" id="btnNext">▶ Begin</button>
+  <span class="kbd">Space</span><div class="dsep"></div>
+  <button class="db db-a" id="btnAuto">⚡ Auto</button><div class="dsep"></div>
+  <div class="dbadge" id="indicator">Ready<span class="cursor">_</span></div><div class="dsep"></div>
+  <div class="dspeed"><span>Speed</span><input type="range" id="speed" min="0.5" max="2.5" step="0.5" value="1"><span id="speedLbl">1×</span></div>
   <div class="dsep"></div>
-  <div class="dspeed"><span>Speed</span><input type="range" id="speedSlider" min="0.5" max="3" step="0.5" value="0.5"><span id="speedLabel">0.5×</span></div>
-  <div class="dsep"></div><button class="db db-r" id="btnReset">↺</button>
+  <button class="db db-r" id="btnReset">↺ Reset</button>
 </div>
 
 <script>
-let currentStage=-1,isRunning=false,speed=0.5;const TOTAL=8;
-document.getElementById('speedSlider').addEventListener('input',e=>{speed=parseFloat(e.target.value);document.getElementById('speedLabel').textContent=speed+'×';});
-function delay(ms){return new Promise(r=>setTimeout(r,ms/speed));}
-function scrollToStage(idx){const el=document.getElementById('stage-'+idx);if(!el)return;window.scrollTo({top:Math.max(0,window.pageYOffset+el.getBoundingClientRect().top-window.innerHeight/2+el.offsetHeight/2),behavior:'smooth'});}
-function syncBtn(){const b=document.getElementById('btnRun');if(currentStage>=TOTAL-1){b.textContent='↺ Restart';b.disabled=false;}else{b.innerHTML='▶ Next Step';b.disabled=isRunning;}}
-function setIndicator(html){document.getElementById('stepIndicator').innerHTML=html+'<span class="cursor">_</span>';}
-function fillProgress(){document.getElementById('pf').style.width=((currentStage+1)/TOTAL*100)+'%';}
-function pulse(id){const e=document.getElementById(id);if(e){e.classList.add('go');setTimeout(()=>e.classList.remove('go'),700);}}
-async function runStage(idx){
-  document.querySelectorAll('.stage').forEach((s,i)=>{
-    if(i===idx)s.style.opacity='1';
-    else if(s.classList.contains('done'))s.style.opacity='0.75';
-    else s.style.opacity='0.4';
-  });
-  const el=document.getElementById('stage-'+idx);el.classList.add('active');
-  setIndicator('<span style="color:var(--a1);">Stage '+(idx+1)+'/'+TOTAL+'</span>');fillProgress();
-  if(idx===0)await s0();else if(idx===1)await s1();else if(idx===2)await s2();else if(idx===3)await s3();else if(idx===4)await s4();else if(idx===5)await s5();else if(idx===6)await s6();else if(idx===7)await s7();
-  el.classList.remove('active');el.classList.add('done');el.style.opacity='0.75';pulse('cp'+idx);
-}
+/* ===== Attention config ===== */
+const TOKENS=['The','bank','by','the','river'];
+const WEIGHTS=[0.05,0.09,0.05,0.05,0.76];
+const RAW=[0.42,1.05,0.55,0.40,2.30];
+const ATTN=[[0.62,0.10,0.10,0.10,0.08],[0.05,0.09,0.05,0.05,0.76],[0.18,0.10,0.46,0.16,0.10],[0.58,0.08,0.10,0.16,0.08],[0.10,0.08,0.20,0.08,0.54]];
+function tokenRow(y,h){const w=110,gap=20,total=5*w+4*gap,x0=(1000-total)/2;return TOKENS.map((t,i)=>({x:x0+i*(w+gap),y,w,h,cx:x0+i*(w+gap)+w/2,cy:y+h/2,label:t}));}
 
-async function s0(){
-  const v=document.getElementById('ideaViz');v.innerHTML='';
-  const examples=[
-    {sentence:'"I deposited money at the bank."',highlight:'bank → finance',c:'rgba(59,130,246'},
-    {sentence:'"We fished by the river bank."',highlight:'bank → geography',c:'rgba(34,197,94'},
-    {sentence:'→ Same word, different meaning — context matters!',highlight:'',c:'rgba(245,158,11',bold:true},
-  ];
-  for(const ex of examples){
-    const d=document.createElement('div');
-    d.style.cssText='border:1px solid '+ex.c+',0.35);border-radius:4px;padding:6px 12px;font-family:"JetBrains Mono",monospace;font-size:10px;color:'+ex.c+',0.9);background:'+ex.c+',0.07);opacity:0;transition:opacity 0.4s;'+(ex.bold?'font-weight:700;':'');
-    d.textContent=(ex.highlight?ex.sentence+'  →  '+ex.highlight:ex.sentence);
-    v.appendChild(d);await delay(400);d.style.opacity='1';
-  }
-  await delay(400);
-}
-
-async function s1(){
-  const v=document.getElementById('qkvViz');v.innerHTML='';
-  const items=[
-    {label:'Q — Query',sub:'"What am I looking for?"',detail:'Current token asking a question',color:'rgba(245,158,11','hex':'#f59e0b'},
-    {label:'K — Key',sub:'"What do I represent?"',detail:'Every token advertising itself',color:'rgba(168,85,247','hex':'#a855f7'},
-    {label:'V — Value',sub:'"What info do I carry?"',detail:'Actual content to be aggregated',color:'rgba(6,182,212','hex':'#06b6d4'},
-  ];
-  for(const it of items){
-    const d=document.createElement('div');
-    d.style.cssText='border:1px solid '+it.color+',0.45);border-radius:5px;padding:8px 12px;background:'+it.color+',0.08);min-width:130px;flex:1;opacity:0;transition:opacity 0.5s;';
-    d.innerHTML='<div style="font-family:\'JetBrains Mono\',monospace;font-size:12px;color:'+it.hex+';font-weight:700;margin-bottom:4px;">'+it.label+'</div><div style="font-family:\'JetBrains Mono\',monospace;font-size:9px;color:var(--text);margin-bottom:3px;">'+it.sub+'</div><div style="font-family:\'JetBrains Mono\',monospace;font-size:9px;color:var(--muted);">'+it.detail+'</div>';
-    v.appendChild(d);await delay(400);d.style.opacity='1';
-  }
-  await delay(300);
-}
-
-async function s2(){
-  const v=document.getElementById('dotViz');v.innerHTML='';
-  const q=document.createElement('div');q.style.cssText='border:1px solid rgba(245,158,11,0.5);border-radius:3px;padding:4px 10px;font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--a1);background:rgba(245,158,11,0.1);opacity:0;transition:opacity 0.4s;';q.textContent='Q("bank")';v.appendChild(q);await delay(300);q.style.opacity='1';
-  const dot=document.createElement('span');dot.style.cssText='font-size:16px;color:var(--muted);align-self:center;margin:0 6px;';dot.textContent='·';v.appendChild(dot);
-  const kstack=document.createElement('div');kstack.style.cssText='display:flex;flex-direction:column;gap:3px;opacity:0;transition:opacity 0.5s;';
-  const words=['The','bank','by','the','river'];const scores=['0.05','0.18','0.07','0.05','0.65'];
-  for(let i=0;i<5;i++){
-    const row=document.createElement('div');row.style.cssText='display:flex;align-items:center;gap:6px;';
-    const k=document.createElement('div');k.style.cssText='border:1px solid rgba(168,85,247,0.4);border-radius:3px;padding:2px 8px;font-family:"JetBrains Mono",monospace;font-size:9px;color:var(--purple);background:rgba(168,85,247,0.07);min-width:56px;';k.textContent='K("'+words[i]+'")';
-    const eq=document.createElement('div');eq.style.cssText='font-family:"JetBrains Mono",monospace;font-size:9px;color:var(--muted);';eq.textContent='=';
-    const score=document.createElement('div');score.style.cssText='font-family:"JetBrains Mono",monospace;font-size:10px;font-weight:700;';score.style.color=i===4?'var(--green)':i===1?'var(--orange)':'var(--muted)';score.textContent=scores[i];
-    row.append(k,eq,score);kstack.appendChild(row);
-  }
-  v.appendChild(kstack);await delay(300);kstack.style.opacity='1';await delay(400);
-}
-
-async function s3(){
-  const v=document.getElementById('scaleViz');v.innerHTML='';
-  const steps=[
-    {t:'Raw scores:  0.05  0.18  0.07  0.05  0.65  (Q·Kᵀ)',c:'rgba(245,158,11'},
-    {t:'÷ √64 = 8:   0.006  0.023  0.009  0.006  0.081',c:'rgba(168,85,247'},
-    {t:'Softmax →  0.05  0.09  0.05  0.05  0.76  ✓ sum=1',c:'rgba(34,197,94'},
-  ];
-  for(const s of steps){
-    const d=document.createElement('div');d.style.cssText='border:1px solid '+s.c+',0.35);border-radius:4px;padding:5px 10px;font-family:"JetBrains Mono",monospace;font-size:10px;color:'+s.c+',0.9);background:'+s.c+',0.07);opacity:0;transition:opacity 0.4s;';d.textContent=s.t;v.appendChild(d);await delay(450);d.style.opacity='1';
-  }
-  await delay(300);
-}
-
-async function s4(){
-  const v=document.getElementById('attnMapViz');v.innerHTML='';
-  const words=['The','bank','by','the','river'];
-  const attn=[[0.60,0.10,0.10,0.10,0.10],[0.05,0.18,0.07,0.04,0.66],[0.20,0.08,0.50,0.12,0.10],[0.60,0.05,0.10,0.15,0.10],[0.10,0.08,0.20,0.08,0.54]];
-  v.style.cssText='display:grid;grid-template-columns:repeat(5,36px);gap:2px;';
-  const labelsEl=document.getElementById('attnLabels');labelsEl.innerHTML='';
-  labelsEl.style.cssText='display:grid;grid-template-columns:repeat(5,36px);gap:2px;';
-  for(const w of words){const d=document.createElement('div');d.style.cssText='font-family:"JetBrains Mono",monospace;font-size:8px;color:var(--muted);text-align:center;overflow:hidden;text-overflow:ellipsis;';d.textContent=w;labelsEl.appendChild(d);}
-  for(let r=0;r<5;r++){for(let c=0;c<5;c++){
-    const cell=document.createElement('div');
-    cell.style.cssText='width:36px;height:28px;border-radius:2px;display:flex;align-items:center;justify-content:center;font-family:"JetBrains Mono",monospace;font-size:8px;transition:all 0.3s;opacity:0;';
-    const val=attn[r][c];const highlight=(r===1&&c===4)||(r===4&&c===4);
-    cell.style.background=`rgba(245,158,11,${val*0.95})`;
-    cell.style.color=val>0.4?'#000':'rgba(245,158,11,0.8)';
-    cell.textContent=val.toFixed(2);
-    if(highlight)cell.style.outline='2px solid var(--green)';
-    v.appendChild(cell);await delay(25);cell.style.opacity='1';
-  }}
-  await delay(400);
-}
-
-async function s5(){
-  const v=document.getElementById('weightedVViz');v.innerHTML='';
-  const rows=[
-    {t:'0.05 × V("The")   +',c:'rgba(100,116,139'},
-    {t:'0.18 × V("bank")  +',c:'rgba(245,158,11'},
-    {t:'0.07 × V("by")    +',c:'rgba(100,116,139'},
-    {t:'0.04 × V("the")   +',c:'rgba(100,116,139'},
-    {t:'0.66 × V("river") =',c:'rgba(34,197,94'},
-    {t:'→ Output("bank") = river-bank context vector ✓',c:'rgba(34,197,94',bold:true},
-  ];
-  for(const r of rows){
-    const d=document.createElement('div');d.style.cssText='border:1px solid '+r.c+',0.35);border-radius:3px;padding:4px 10px;font-family:"JetBrains Mono",monospace;font-size:10px;color:'+r.c+',0.9);background:'+r.c+',0.06);opacity:0;transition:opacity 0.4s;'+(r.bold?'font-weight:700;':'');d.textContent=r.t;v.appendChild(d);await delay(250);d.style.opacity='1';
-  }
-  await delay(400);
-}
-
-async function s6(){
-  const v=document.getElementById('multiHeadViz');v.innerHTML='';
-  const heads=[{n:'Head 1',role:'syntax',c:'rgba(245,158,11'},{n:'Head 2',role:'coreference',c:'rgba(168,85,247'},{n:'Head 3',role:'long-range',c:'rgba(59,130,246'},{n:'Head 4',role:'local ctx',c:'rgba(34,197,94'},{n:'···',role:'h=8 total',c:'rgba(100,116,139'}];
-  for(const h of heads){
-    const d=document.createElement('div');d.style.cssText='border:1px solid '+h.c+',0.4);border-radius:4px;padding:5px 9px;font-family:"JetBrains Mono",monospace;font-size:9px;color:'+h.c+',0.9);background:'+h.c+',0.08);opacity:0;transition:opacity 0.3s;text-align:center;';
-    d.innerHTML='<div style="font-weight:700;">'+h.n+'</div><div style="color:var(--muted);font-size:8px;">'+h.role+'</div>';
-    v.appendChild(d);await delay(200);d.style.opacity='1';
-  }
-  const arr=document.createElement('div');arr.style.cssText='font-size:18px;color:var(--muted);align-self:center;margin:0 6px;';arr.textContent='→';v.appendChild(arr);
-  const concat=document.createElement('div');concat.style.cssText='border:1px solid rgba(34,197,94,0.5);border-radius:4px;padding:5px 10px;font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--green);background:rgba(34,197,94,0.1);opacity:0;transition:opacity 0.4s;';
-  concat.innerHTML='Concat<br>× W_O<br><span style="font-size:8px;color:var(--muted);">→ d_model</span>';
-  v.appendChild(concat);await delay(300);concat.style.opacity='1';
-  await delay(400);
-}
-
-async function s7(){
-  const v=document.getElementById('fullFormulaViz');v.innerHTML='';
-  const lines=[
-    {t:'Step 1:  Q = x·W_Q,  K = x·W_K,  V = x·W_V',c:'rgba(245,158,11'},
-    {t:'Step 2:  scores = Q · Kᵀ / √d_k',c:'rgba(168,85,247'},
-    {t:'Step 3:  weights = softmax(scores)',c:'rgba(59,130,246'},
-    {t:'Step 4:  head = weights · V',c:'rgba(6,182,212'},
-    {t:'Step 5:  MHA = Concat(head₁…headₕ) · W_O',c:'rgba(34,197,94'},
-    {t:'Attn(Q,K,V) = softmax(QKᵀ/√d_k) · V  ← the equation',c:'rgba(34,197,94',bold:true},
-  ];
-  for(const l of lines){
-    const d=document.createElement('div');d.style.cssText='border:1px solid '+l.c+',0.35);border-radius:4px;padding:5px 10px;font-family:"JetBrains Mono",monospace;font-size:10px;color:'+l.c+',0.9);background:'+l.c+',0.07);opacity:0;transition:opacity 0.4s;'+(l.bold?'font-weight:700;border-width:2px;':'');d.textContent=l.t;v.appendChild(d);await delay(350);d.style.opacity='1';
-  }
-  await delay(400);document.getElementById('resultBox').classList.add('show');setIndicator('<span style="color:var(--green);">✅ Complete!</span>');
-}
-
-document.getElementById('btnRun').addEventListener('click',()=>{if(currentStage>=TOTAL-1){resetAll();return;}if(isRunning)return;isRunning=true;syncBtn();currentStage++;scrollToStage(currentStage);runStage(currentStage).then(()=>{isRunning=false;syncBtn();});});
-document.getElementById('btnAuto').addEventListener('click',async()=>{if(isRunning)return;if(currentStage>=TOTAL-1){resetAll();await delay(300);}isRunning=true;syncBtn();while(currentStage<TOTAL-1){currentStage++;scrollToStage(currentStage);await runStage(currentStage);await delay(350);}isRunning=false;syncBtn();});
-document.getElementById('btnReset').addEventListener('click',resetAll);
-document.addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;if(e.code==='Space'||e.code==='ArrowRight'){e.preventDefault();document.getElementById('btnRun').click();}if(e.code==='KeyR'){e.preventDefault();resetAll();}if(e.code==='KeyA'){e.preventDefault();document.getElementById('btnAuto').click();}});
-function resetAll(){isRunning=false;currentStage=-1;syncBtn();document.querySelectorAll('.stage').forEach((s,i)=>{s.classList.remove('active','done');s.style.opacity=i===0?'1':'0.4';});document.getElementById('pf').style.width='0%';setIndicator('Ready');document.getElementById('resultBox').classList.remove('show');['ideaViz','qkvViz','dotViz','scaleViz','attnMapViz','attnLabels','weightedVViz','multiHeadViz','fullFormulaViz'].forEach(id=>{const e=document.getElementById(id);if(e)e.innerHTML='';});}
-(function initOpacity(){document.querySelectorAll('.stage').forEach((s,i)=>{s.style.opacity=i===0?'1':'0.4';});})();
-syncBtn();
+const DIAGRAM={
+ title:'Attention Mechanism',
+ subtitle:'Scaled Dot-Product · Multi-Head · The core of every LLM',
+ formula:'Attention(Q,K,V) = softmax(Q·Kᵀ / √d&#8342;) · V',
+ takeawaysSub:"why attention wins · where it hurts · how it's used",
+ arch:[
+  {id:'in',type:'tokens',items:TOKENS,hot:'bank',step:0},
+  {id:'emb',t:'Embedding + Positional',s:'token vectors'},
+  {id:'qkv',type:'split',label:'LINEAR PROJECTIONS',items:[{h:'Q',l:'query',cls:'q'},{h:'K',l:'key',cls:'k'},{h:'V',l:'value',cls:'v'}],step:1},
+  {id:'mm1',t:'MatMul · Q·Kᵀ',s:'similarity scores',c:'amber',step:2},
+  {id:'scale',t:'Scale · ÷ √dₖ',s:'stabilise gradients',c:'purple',step:3},
+  {id:'soft',t:'Softmax',s:'→ attention weights',c:'green',step:4},
+  {id:'mm2',t:'MatMul · V',s:'weighted sum of values',c:'cyan',step:5},
+  {id:'mh',t:'Multi-Head · Concat·W_O',s:'h heads in parallel',c:'orange',step:6},
+  {id:'out',t:'Output · context vectors',s:'',c:'outp',step:7},
+ ],
+ captions:[
+  ['01 · The Core Idea','Every word asks a question','A word like “bank” is ambiguous on its own. Attention lets each token look at the others and pull in the context it needs to resolve its meaning.','“bank” + “river” → river bank, not money'],
+  ['02 · Q · K · V','Three learned projections','Each token embedding is multiplied by learned weight matrices to produce a Query, a Key, and a Value vector — three roles for the same word.','Q = x·W_Q   K = x·W_K   V = x·W_V'],
+  ['03 · Dot-Product Scores','Compare the query to every key','The Query for “bank” takes a dot product with every Key. A larger dot product means the two tokens are more relevant to each other.','score(i,j) = Qᵢ · Kⱼᵀ'],
+  ['04 · Scale + Softmax','Turn scores into probabilities','Divide by √dₖ so gradients stay stable, then softmax squashes the scores into attention weights that sum to exactly 1.','softmax( Q·Kᵀ / √dₖ )'],
+  ['05 · Attention Map','Where every word looks','Run it for all queries and you get the full attention matrix. “bank” lights up on “river” — the model has disambiguated the word.','each row sums to 1.0'],
+  ['06 · Weighted Sum','Blend the value vectors','Each output is the weighted sum of the Value vectors, using the attention weights. “bank” becomes a blend dominated by “river”.','output = Σ wⱼ · Vⱼ'],
+  ['07 · Multi-Head','Many heads, many patterns','In practice h heads run in parallel — each learns a different relationship. Their outputs are concatenated and mixed by W_O.','MHA = Concat(head₁…headₕ) · W_O'],
+  ['08 · Full Formula','The heart of every LLM','Assembled, this is scaled dot-product attention. Unlike an RNN it processes the whole sequence in parallel — which is why Transformers scale.','Attention(Q,K,V) = softmax(QKᵀ/√dₖ)·V'],
+ ],
+ steps:[
+  async function(){
+    const bank=chip(440,250,120,66,'"bank"',C.a1,{fs:18,solid:true});
+    await appear(bank.g,500);
+    const ring=el('circle',{cx:500,cy:283,r:46,fill:'none',stroke:C.a1,'stroke-width':1.4,opacity:0});
+    let cyc=0;(function pulse(){tween({from:0,to:1,dur:1600,ease:easeOut,onUpdate:v=>{ring.setAttribute('r',46+v*40);ring.setAttribute('opacity',(0.5*(1-v)).toFixed(3));},onDone:()=>{if(gMain.contains(ring)&&++cyc<3)pulse();else ring.setAttribute('opacity',0);}});})();
+    const fin=chip(120,90,250,72,'',C.blue,{parent:gMain});
+    txt(125,30,'“I deposited money at the bank”',{size:10,fill:C.blue,parent:fin.g});txt(125,52,'→ FINANCE',{size:10,fill:C.dim,weight:700,parent:fin.g});
+    const geo=chip(630,360,250,72,'',C.green,{parent:gMain});
+    txt(125,30,'“We fished by the river bank”',{size:10,fill:C.green,parent:geo.g});txt(125,52,'→ GEOGRAPHY',{size:10,fill:C.dim,weight:700,parent:geo.g});
+    await wait(150);await appear(fin.g,460);await flow(curve(370,126,440,275),{color:C.blue,count:4,dur:850});
+    await appear(geo.g,460);await flow(curve(630,396,560,290),{color:C.green,count:4,dur:850});
+    const v=chip(360,440,280,44,'context decides the meaning',C.a2,{fs:12,tc:C.a2,parent:gMain});await appear(v.g,460);
+  },
+  async function(){
+    const row=tokenRow(54,46);
+    const chips=row.map(r=>chip(r.x,r.y,r.w,r.h,'"'+r.label+'"',r.label==='bank'?C.a1:C.dim,{fs:12,tc:r.label==='bank'?C.a1:C.text}));
+    for(const c of chips){appear(c.g,260);await wait(70);}
+    const band=el('g',{opacity:0});gMain.appendChild(band);
+    el('rect',{x:150,y:180,width:700,height:40,rx:8,fill:C.purple,opacity:0.05},band);
+    el('rect',{x:150,y:180,width:700,height:40,rx:8,fill:'none',stroke:C.purple,'stroke-width':1.3,'stroke-dasharray':'4 4'},band);
+    txt(500,205,'LINEAR  PROJECTION   ×  W_Q   W_K   W_V   (learned)',{size:11,fill:C.purple,parent:band});
+    await appear(band,420);
+    const kinds=[['Q',C.a1],['K',C.purple],['V',C.cyan]];
+    for(let i=0;i<5;i++){const cx=row[i].cx;flow(`M${cx},100 L${cx},180`,{color:C.dim,count:3,dur:600,trail:false});await wait(120);
+      for(let k=0;k<3;k++){const col=cx-78+k*52;const sq=chip(col,290+k*44,46,30,kinds[k][0],kinds[k][1],{fs:12,rx:5});
+        flow(`M${cx},220 L${col+23},${290+k*44}`,{color:kinds[k][1],count:2,dur:520,trail:false});appear(sq.g,300);}await wait(60);}
+    txt(500,478,'Q = what I’m looking for   ·   K = what I contain   ·   V = what I offer',{size:11,fill:C.muted});await wait(200);
+  },
+  async function(){
+    const q=chip(70,250,150,64,'Q("bank")',C.a1,{fs:14,solid:true});await appear(q.g,420);
+    txt(145,330,'the query asks…',{size:9,fill:C.muted,parent:gMain});
+    const ys=[56,148,240,332,420];const kchips=TOKENS.map((t,i)=>chip(770,ys[i],160,48,'K("'+t+'")',C.purple,{fs:12}));
+    for(const k of kchips){appear(k.g,240);await wait(60);}await wait(120);
+    for(let i=0;i<5;i++){flow(curve(220,282,770,ys[i]+24,0.4),{color:i===4?C.green:C.a1,count:2+Math.round(WEIGHTS[i]*8),dur:1000,r:i===4?3.4:2.6});}
+    await wait(620);
+    for(let i=0;i<5;i++){const hi=i===4;const s=chip(625,ys[i]+4,120,40,'score '+RAW[i].toFixed(2),hi?C.green:C.muted,{fs:11,tc:hi?C.green:C.dim});appear(s.g,260);await wait(70);}
+    txt(500,484,'“river” scores highest → most relevant to “bank”',{size:11,fill:C.green});await wait(160);
+  },
+  async function(){
+    const bx=180,bw=128,gap=20,baseY=430;const cols=TOKENS.map((t,i)=>({x:bx+i*(bw+gap),label:t}));
+    el('line',{x1:150,y1:baseY,x2:920,y2:baseY,stroke:C.line,'stroke-width':1.2});const maxRaw=Math.max(...RAW);
+    const bars=cols.map((c,i)=>{const g=el('g',{});const rect=el('rect',{x:c.x,y:baseY,width:bw,height:0,rx:4,fill:C.a1,opacity:0.85},g);
+      txt(c.x+bw/2,baseY+22,'"'+c.label+'"',{size:10,fill:C.muted,parent:g});const val=txt(c.x+bw/2,baseY-6,'',{size:11,fill:C.a2,weight:700,parent:g});return {rect,val,x:c.x};});
+    const lab=txt(500,90,'RAW  SCORES   (Q·Kᵀ)',{size:13,fill:C.a1,weight:700});
+    await tween({dur:700,onUpdate:p=>{bars.forEach((b,i)=>{const h=RAW[i]/maxRaw*300*p;b.rect.setAttribute('y',baseY-h);b.rect.setAttribute('height',h);b.val.setAttribute('y',baseY-h-6);b.val.textContent=(RAW[i]*p).toFixed(2);});}});
+    await wait(400);lab.textContent='÷ √dₖ   (scale down · dₖ=64 → √dₖ=8)';lab.setAttribute('fill',C.purple);
+    await tween({dur:650,onUpdate:p=>{bars.forEach((b,i)=>{const f=1-0.55*p;const h=RAW[i]/maxRaw*300*f;b.rect.setAttribute('y',baseY-h);b.rect.setAttribute('height',h);b.rect.setAttribute('fill',C.purple);b.val.setAttribute('y',baseY-h-6);b.val.textContent=(RAW[i]/8).toFixed(2);});}});
+    await wait(400);lab.textContent='SOFTMAX  →  weights sum to 1.0';lab.setAttribute('fill',C.green);
+    const startH=RAW.map(r=>r/maxRaw*300*0.45);
+    await tween({dur:850,ease:easeInOut,onUpdate:p=>{bars.forEach((b,i)=>{const h=startH[i]+(WEIGHTS[i]*330-startH[i])*p;b.rect.setAttribute('y',baseY-h);b.rect.setAttribute('height',Math.max(0,h));const col=i===4?C.green:C.a1;b.rect.setAttribute('fill',col);b.val.setAttribute('y',baseY-h-6);b.val.setAttribute('fill',col);b.val.textContent=(WEIGHTS[i]*p).toFixed(2);});}});
+    const sumtag=chip(700,70,180,44,'Σ weights = 1.00 ✓',C.green,{fs:12,tc:C.green,parent:gMain});await appear(sumtag.g,360);await wait(150);
+  },
+  async function(){
+    stageTitle('ATTENTION  MATRIX   ·   rows = query · columns = key');
+    const n=5,cell=64,gx=320,gy=110,gap=4;
+    TOKENS.forEach((t,c)=>txt(gx+c*(cell+gap)+cell/2,gy-12,t,{size:9,fill:C.muted}));
+    TOKENS.forEach((t,r)=>txt(gx-14,gy+r*(cell+gap)+cell/2+3,t,{size:9,fill:C.muted,anchor:'end'}));
+    for(let r=0;r<n;r++)for(let c=0;c<n;c++){const v=ATTN[r][c];const x=gx+c*(cell+gap),y=gy+r*(cell+gap);const hi=(r===1&&c===4);
+      el('rect',{x,y,width:cell,height:cell,rx:5,fill:C.bg2,stroke:C.line,'stroke-width':1});
+      const rect=el('rect',{x,y,width:cell,height:cell,rx:5,fill:C.a1,'fill-opacity':0,stroke:hi?C.green:'none','stroke-width':hi?2.5:0});
+      const t=txt(x+cell/2,y+cell/2+4,v.toFixed(2),{size:11,fill:C.dim,opacity:0});
+      tween({dur:280,onUpdate:p=>{rect.setAttribute('fill-opacity',(v*p).toFixed(3));t.setAttribute('opacity',p.toFixed(3));t.setAttribute('fill',v>0.42?'#0a0a0a':C.text);}});await wait(34);}
+    await wait(150);const cap=chip(690,250,250,60,'',C.green,{parent:gMain});
+    txt(125,26,'row "bank" → col "river"',{size:11,fill:C.green,parent:cap.g});txt(125,46,'weight 0.76  ·  disambiguated',{size:10,fill:C.dim,parent:cap.g});await appear(cap.g,420);
+  },
+  async function(){
+    const ys=[50,140,230,320,410];
+    const vchips=TOKENS.map((t,i)=>{const g=chip(70,ys[i],150,48,'V("'+t+'")',C.cyan,{fs:12});txt(255,ys[i]+20,'w = '+WEIGHTS[i].toFixed(2),{size:11,fill:i===4?C.green:C.muted,weight:i===4?700:400,parent:gMain});return g;});
+    for(const c of vchips){appear(c.g,200);await wait(60);}
+    const out=chip(640,250,250,72,'Output("bank")',C.a1,{fs:14,solid:true,tc:C.text});await appear(out.g,420);const outRect=out.g.querySelector('rect');await wait(150);
+    for(let i=0;i<5;i++){flow(curve(330,ys[i]+24,640,286,0.35),{color:i===4?C.green:C.cyan,count:1+Math.round(WEIGHTS[i]*9),dur:1050,r:i===4?3.6:2.4});}
+    tween({dur:1300,onUpdate:p=>{outRect.setAttribute('stroke',p>0.5?C.green:C.a1);outRect.setAttribute('fill',`color-mix(in srgb, ${C.a1} ${(100-p*60).toFixed(0)}%, ${C.green})`);}});
+    await wait(1100);txt(765,360,'≈ 0.76·V(river) + small rest  →  river-bank context vector',{size:10.5,fill:C.green,parent:gMain});await wait(150);
+  },
+  async function(){
+    stageTitle('MULTI-HEAD  ATTENTION   ·   h = 8 heads in parallel');
+    const roles=['syntax','coreference','position','local','rare words','verbs','subject','long-range'];
+    const cols=4,mw=120,mh=120,gx=120,gy=100,gapx=70,gapy=40;const heads=[];
+    for(let h=0;h<8;h++){const cx=gx+(h%cols)*(mw+gapx),cy=gy+Math.floor(h/cols)*(mh+gapy);
+      const g=el('g',{transform:`translate(500,250) scale(0.2)`,opacity:0});gMain.appendChild(g);
+      el('rect',{x:0,y:0,width:mw,height:mh,rx:8,fill:C.bg2,stroke:C.line,'stroke-width':1.2},g);
+      for(let r=0;r<4;r++)for(let c=0;c<4;c++){const v=Math.abs(Math.sin((h+1)*2.3+r*1.7+c*0.9))*0.9;el('rect',{x:8+c*26,y:24+r*22,width:24,height:20,rx:3,fill:C.a1,'fill-opacity':v.toFixed(2)},g);}
+      txt(mw/2,16,'Head '+(h+1),{size:9,fill:C.a2,parent:g});txt(mw/2,mh-6,roles[h],{size:8,fill:C.muted,parent:g});heads.push({g,cx,cy});}
+    for(let i=0;i<heads.length;i++){const h=heads[i];tween({dur:560,ease:easeOut,onUpdate:(v,p)=>{const s=0.2+0.8*p;const x=500+(h.cx-500)*p;const y=250+(h.cy-250)*p;h.g.setAttribute('transform',`translate(${x},${y}) scale(${s})`);h.g.setAttribute('opacity',p);}});await wait(120);}
+    await wait(300);const concat=chip(760,270,180,52,'Concat · W_O',C.green,{fs:13,tc:C.green});appear(concat.g,420);
+    for(let h=0;h<8;h++){flow(curve(heads[h].cx+60,heads[h].cy+60,760,296,0.2),{color:C.a1,count:2,dur:900,r:2});}
+    await wait(700);txt(850,345,'→ d_model output',{size:10,fill:C.muted,parent:gMain});await wait(150);
+  },
+  async function(){
+    const parts=[{s:'Attention(Q,K,V) =',c:C.text,x:300},{s:'softmax(',c:C.green,x:520},{s:'Q·Kᵀ',c:C.a1,x:610},{s:'/ √dₖ',c:C.purple,x:680},{s:')',c:C.green,x:735},{s:'· V',c:C.cyan,x:770}];
+    const y=210;el('rect',{x:250,y:165,width:560,height:90,rx:12,fill:C.a1,'fill-opacity':0.04,stroke:'rgba(245,158,11,.3)','stroke-width':1.4,opacity:0});fade(gMain.lastChild,1,500);
+    for(const p of parts){const t=txt(p.x,y,p.s,{size:20,fill:p.c,weight:600,anchor:'start',opacity:0});await tween({dur:300,onUpdate:(v,pr)=>{t.setAttribute('opacity',v);t.setAttribute('transform',`translate(0,${10*(1-pr)})`);}});await wait(90);}
+    const recap=[['Q·Kᵀ','similarity',C.a1],['÷√dₖ','stabilise',C.purple],['softmax','→ weights',C.green],['· V','blend values',C.cyan],['× h heads','rich patterns',C.orange]];
+    const rw=160,gap=14,total=5*rw+4*gap,x0=(1000-total)/2;
+    for(let i=0;i<recap.length;i++){const g=chip(x0+i*(rw+gap),330,rw,58,'',recap[i][2],{parent:gMain});txt(rw/2,27,recap[i][0],{size:13,fill:recap[i][2],weight:700,parent:g.g});txt(rw/2,46,recap[i][1],{size:9.5,fill:C.muted,parent:g.g});appear(g.g,300);await wait(90);}
+    const ban=chip(300,432,400,50,'see the full takeaways below ↓',C.green,{fs:13,tc:C.green,parent:gMain});await appear(ban.g,460);
+  },
+ ],
+ takeaways:{
+  advantages:[
+   ['Long-range context.','Any token attends to any other in a single hop — no information decay over distance.'],
+   ['Fully parallel.','The whole sequence is processed at once — trains far faster than recurrent models on GPUs.'],
+   ['Interpretable.','Attention weights reveal <i>what looks at what</i> — a rare window into the model.'],
+   ['Content-based routing.','Relevance is learned dynamically per input, not fixed by position.'],
+  ],
+  challenges:[
+   ['O(n²) cost.','Compute and memory grow quadratically with sequence length — long contexts get expensive.'],
+   ['No order built in.','Self-attention is permutation-invariant; it needs positional encodings.'],
+   ['Memory-heavy.','The KV cache at inference grows with context length.'],
+   ['Data-hungry.','Few inductive biases means it needs large datasets to generalise well.'],
+  ],
+  uses:[
+   ['LLMs.','GPT, BERT, T5, LLaMA, Claude, Gemini — the entire Transformer family.'],
+   ['Vision.','ViT, CLIP, DINO, SAM — patches as tokens with global attention.'],
+   ['Generative.','Cross-attention conditions Stable Diffusion / DALL·E on text.'],
+   ['Speech &amp; multimodal.','Whisper, AudioLM, Flamingo, GPT-4o.'],
+  ],
+  variants:[
+   ['FlashAttention.','IO-aware kernel — exact result, O(n) memory, much faster.'],
+   ['MQA / GQA.','Share K/V across heads → smaller cache, faster decoding (LLaMA-2/3).'],
+   ['Sparse / sliding-window.','Longformer, BigBird, Mistral — attend locally to cut O(n²).'],
+   ['Linear attention &amp; RoPE/ALiBi.','Performer for O(n); rotary/ALiBi for length generalisation.'],
+  ],
+  compare:{cols:['Attention','RNN / LSTM','Convolution'],rows:[
+   ['Long-range dependency','Direct, O(1) path','Fades with distance','Limited by kernel size'],
+   ['Parallelism','Full sequence at once','Sequential — slow','Full'],
+   ['Cost in length n','O(n²·d)','O(n·d²)','O(n·k·d)'],
+   ['Sense of order','Needs positional enc.','Inherent','Local / relative'],
+   ['Interpretability','Attention weights','Opaque hidden state','Feature maps'],
+  ]},
+  pitfalls:[
+   ['Missing causal mask','in a decoder — the model peeks at future tokens and "cheats" during training.'],
+   ['Dropping the √dₖ scaling','— large dot products saturate softmax and gradients vanish.'],
+   ['Wrong padding mask','— attending to PAD tokens silently corrupts the output.'],
+   ['Train/inference length mismatch','in positional encodings — extrapolation degrades quality.'],
+   ['Head reshape bugs','— mixing up (batch, heads, seq, d_k) dims fails silently, not loudly.'],
+  ],
+ },
+};
 </script>
+<script src="dl_engine.js"></script>
 </body>
 </html>

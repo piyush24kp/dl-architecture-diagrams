@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Layout Concept v2 — Attention</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#0f1420;font-family:'DM Sans',sans-serif;color:#e2e8f0;padding:26px 18px 40px;}
+.board-title{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:3px;color:#f59e0b;text-align:center;}
+.board-sub{font-family:'JetBrains Mono',monospace;font-size:11px;color:#94a3b8;text-align:center;margin-top:6px;letter-spacing:1px;}
+.stack{display:flex;flex-direction:column;align-items:center;gap:8px;margin-top:24px;}
+.tagnum{font-family:'Bebas Neue',sans-serif;font-size:15px;color:#64748b;letter-spacing:2px;margin-top:14px;}
+.cap{font-family:'JetBrains Mono',monospace;font-size:10px;color:#cbd5e1;text-align:center;line-height:1.5;max-width:620px;}
+.cap b{color:#fbbf24;}
+.downarrow{font-size:22px;color:#475569;}
+
+/* frame */
+.frame{width:660px;background:#0b0f1a;border:1px solid #1e293b;border-radius:12px;overflow:hidden;
+  box-shadow:0 16px 44px rgba(0,0,0,.5);position:relative;
+  background-image:radial-gradient(ellipse 70% 40% at 50% -5%,rgba(245,158,11,.07),transparent 70%);}
+.fh{height:32px;border-bottom:1px solid #1e293b;display:flex;align-items:center;gap:8px;padding:0 12px;}
+.fh .t{font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:2px;color:#f59e0b;}
+.fh .s{font-family:'JetBrains Mono',monospace;font-size:7px;color:#475569;letter-spacing:1px;}
+.fh .eq{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:7px;color:#f59e0b;border:1px solid rgba(245,158,11,.25);background:rgba(245,158,11,.06);padding:3px 6px;border-radius:4px;}
+
+/* ---------- architecture diagram ---------- */
+.diagram{display:flex;flex-direction:column;align-items:center;padding:18px 0 22px;}
+.diagram.mini{padding:8px 0;transform:scale(.92);}
+.blk{border:1px solid #334155;border-radius:7px;background:#0e1322;padding:7px 16px;min-width:200px;text-align:center;position:relative;}
+.blk .bt{font-family:'JetBrains Mono',monospace;font-size:10px;color:#cbd5e1;font-weight:600;}
+.blk .bs{font-family:'JetBrains Mono',monospace;font-size:7.5px;color:#64748b;margin-top:1px;}
+.conn{width:2px;height:15px;background:linear-gradient(#334155,#334155);}
+.conn::after{content:'';position:absolute;}
+.tokrow{display:flex;gap:5px;}
+.tok{border:1px solid #475569;border-radius:4px;padding:3px 9px;font-family:'JetBrains Mono',monospace;font-size:8px;color:#94a3b8;background:#0e1322;}
+.tok.hot{border-color:#f59e0b;color:#f59e0b;background:rgba(245,158,11,.08);}
+/* branch */
+.branch-wrap{display:flex;flex-direction:column;align-items:center;}
+.branch-label{font-family:'JetBrains Mono',monospace;font-size:7px;color:#475569;letter-spacing:1px;margin-bottom:5px;}
+.branch{display:flex;gap:14px;}
+.qkv{border-radius:6px;padding:6px 14px;text-align:center;font-family:'JetBrains Mono',monospace;}
+.qkv .h{font-size:11px;font-weight:700;}
+.qkv .l{font-size:7px;color:#64748b;margin-top:1px;}
+.qkv.q{border:1px solid #f59e0b;background:rgba(245,158,11,.08);}.qkv.q .h{color:#f59e0b;}
+.qkv.k{border:1px solid #a855f7;background:rgba(168,85,247,.08);}.qkv.k .h{color:#c084fc;}
+.qkv.v{border:1px solid #06b6d4;background:rgba(6,182,212,.08);}.qkv.v .h{color:#22d3ee;}
+/* colored block variants */
+.blk.amber{border-color:rgba(245,158,11,.5);}.blk.amber .bt{color:#fbbf24;}
+.blk.purple{border-color:rgba(168,85,247,.5);}.blk.purple .bt{color:#c084fc;}
+.blk.green{border-color:rgba(34,197,94,.5);}.blk.green .bt{color:#86efac;}
+.blk.cyan{border-color:rgba(6,182,212,.5);}.blk.cyan .bt{color:#22d3ee;}
+.blk.orange{border-color:rgba(249,115,22,.5);}.blk.orange .bt{color:#fb923c;}
+.blk.outp{border-color:rgba(34,197,94,.6);background:rgba(34,197,94,.1);}.blk.outp .bt{color:#86efac;}
+/* active glow */
+.blk.active{border-color:#f59e0b!important;box-shadow:0 0 0 2px rgba(245,158,11,.25),0 0 22px rgba(245,158,11,.25);background:rgba(245,158,11,.1);}
+.blk.active .bt{color:#fbbf24;}
+.done-tick{position:absolute;top:-6px;right:-6px;font-size:9px;}
+
+/* ---------- stepping split ---------- */
+.split{display:flex;min-height:380px;}
+.dock{width:200px;border-right:1px solid #1e293b;background:rgba(255,255,255,.015);padding:8px 0;overflow:hidden;position:relative;}
+.dock .dh{font-family:'JetBrains Mono',monospace;font-size:7px;color:#475569;letter-spacing:1px;text-align:center;margin-bottom:2px;}
+.dock .diagram{transform:scale(.74);transform-origin:top center;margin-top:-6px;}
+.dock .blk{min-width:150px;padding:5px 10px;}
+.dock .blk .bt{font-size:8px;}.dock .blk .bs{display:none;}
+.dock .qkv{padding:4px 8px;}.dock .qkv .h{font-size:8px;}.dock .qkv .l{display:none;}
+.dock .tok{padding:2px 5px;font-size:6px;}
+.stage{flex:1;position:relative;padding:14px;}
+.stage .hint{position:absolute;top:9px;left:14px;font-family:'JetBrains Mono',monospace;font-size:7px;color:#f59e0b;letter-spacing:1px;}
+.viz{position:absolute;inset:30px 14px 70px;}
+.qn{position:absolute;left:6px;top:42%;width:74px;height:34px;border:1px solid #f59e0b;border-radius:6px;background:rgba(245,158,11,.12);
+  font-family:'JetBrains Mono',monospace;font-size:9px;color:#f59e0b;display:flex;align-items:center;justify-content:center;}
+.kn{position:absolute;right:6px;width:66px;height:22px;border:1px solid #a855f7;border-radius:5px;background:rgba(168,85,247,.08);
+  font-family:'JetBrains Mono',monospace;font-size:7px;color:#c084fc;display:flex;align-items:center;justify-content:center;}
+.beam{position:absolute;height:1.5px;transform-origin:left center;border-radius:2px;}
+.dot{position:absolute;width:6px;height:6px;border-radius:50%;}
+.scap{position:absolute;bottom:10px;left:14px;right:14px;background:rgba(12,17,30,.85);border:1px solid #1e293b;border-left:3px solid #f59e0b;
+  border-radius:7px;padding:8px 11px;}
+.scap .e{font-family:'JetBrains Mono',monospace;font-size:6.5px;color:#f59e0b;letter-spacing:1px;}
+.scap .ti{font-size:11px;font-weight:600;color:#e2e8f0;margin-top:2px;}
+.scap .bd{font-size:8.5px;color:#94a3b8;margin-top:2px;line-height:1.4;}
+
+.note{margin:30px auto 0;max-width:660px;border:1px solid #1e293b;border-radius:10px;background:#0b0f1a;padding:16px 20px;font-size:12.5px;line-height:1.6;color:#cbd5e1;}
+.note h3{font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:2px;color:#f59e0b;text-transform:uppercase;margin-bottom:10px;}
+.note b{color:#fbbf24;}
+
+/* end-of-page takeaways */
+.detail{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:18px;}
+.dcol{border:1px solid #1e293b;border-radius:9px;padding:13px 15px;background:#0e1322;}
+.dcol.adv{border-color:rgba(34,197,94,.3);}
+.dcol.cha{border-color:rgba(245,158,11,.3);}
+.dcol h4{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:7px;}
+.dcol.adv h4{color:#4ade80;}.dcol.cha h4{color:#fbbf24;}
+.dcol ul{list-style:none;display:flex;flex-direction:column;gap:8px;}
+.dcol li{font-size:10.5px;color:#cbd5e1;line-height:1.45;display:grid;grid-template-columns:14px 1fr;gap:7px;align-items:start;}
+.dcol li .mk{font-family:'JetBrains Mono',monospace;font-size:11px;}
+.dcol.adv li .mk{color:#22c55e;}.dcol.cha li .mk{color:#f59e0b;}
+.dcol li b{color:#f1f5f9;font-weight:600;}
+</style>
+</head>
+<body>
+<div class="board-title">ATTENTION — FULL VIEW IS A DIAGRAM, NOT A LIST</div>
+<div class="board-sub">vertical architecture flow ➜ docks left while a step animates ➜ returns to the diagram</div>
+
+<div class="stack">
+  <div class="tagnum">① START &amp; ③ END — full architecture diagram</div>
+  <div class="frame">
+    <div class="fh"><div class="t">ATTENTION</div><div class="s">SCALED DOT-PRODUCT · MULTI-HEAD</div><div class="eq">softmax(Q·Kᵀ/√dₖ)·V</div></div>
+    <div class="diagram" id="diagFull"></div>
+  </div>
+  <div class="cap"><b>A real flow diagram</b> — tokens → projections branch into Q/K/V → MatMul → Scale → Softmax → MatMul·V → Multi-Head → Output, connected by arrows. (At the end, every block is ticked done.)</div>
+
+  <div class="downarrow">↓ &nbsp; press Next / Auto &nbsp; ↓</div>
+
+  <div class="tagnum">② WHILE STEPPING — diagram docks left, step animates right</div>
+  <div class="frame">
+    <div class="fh"><div class="t">ATTENTION</div><div class="s">STEP 3 / 8 · MATMUL Q·Kᵀ</div><div class="eq">Q·Kᵀ</div></div>
+    <div class="split">
+      <div class="dock"><div class="dh">ARCHITECTURE · YOU ARE HERE</div><div class="diagram mini" id="diagDock"></div></div>
+      <div class="stage">
+        <div class="hint">▶ ANIMATING THIS BLOCK</div>
+        <div class="viz" id="viz"><div class="qn">Q("bank")</div></div>
+        <div class="scap"><div class="e">03 · DOT-PRODUCT SCORES</div><div class="ti">Compare the query to every key</div><div class="bd">The highlighted block on the left is the one playing — flowing particles show Q·Kᵀ being computed against every key.</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="cap">The whole diagram <b>scales down into the left dock</b> as a live “you are here” map; the active block <b>animates large on the right</b>. Each Next moves the highlight down the diagram.</div>
+
+  <div class="downarrow">↓ &nbsp; after the last step &nbsp; ↓</div>
+
+  <div class="tagnum">④ END OF PAGE — takeaways: advantages &amp; challenges</div>
+  <div class="frame">
+    <div class="fh"><div class="t">ATTENTION</div><div class="s">WHY IT WINS · WHERE IT HURTS</div><div class="eq">summary</div></div>
+    <div class="detail">
+      <div class="dcol adv">
+        <h4>✓ Advantages</h4>
+        <ul>
+          <li><span class="mk">+</span><span><b>Long-range context.</b> Any token can attend to any other in one hop — no information decay over distance.</span></li>
+          <li><span class="mk">+</span><span><b>Fully parallel.</b> No recurrence, so the whole sequence trains at once on GPUs — far faster than RNNs.</span></li>
+          <li><span class="mk">+</span><span><b>Interpretable.</b> Attention weights show <i>what looks at what</i> — a window into the model.</span></li>
+          <li><span class="mk">+</span><span><b>Content-based routing.</b> Relevance is learned dynamically per input, not fixed by position.</span></li>
+        </ul>
+      </div>
+      <div class="dcol cha">
+        <h4>⚠ Challenges</h4>
+        <ul>
+          <li><span class="mk">!</span><span><b>O(n²) cost.</b> Compute &amp; memory grow quadratically with sequence length — long contexts get expensive.</span></li>
+          <li><span class="mk">!</span><span><b>No order built in.</b> Needs positional encodings; permutation-invariant on its own.</span></li>
+          <li><span class="mk">!</span><span><b>Memory heavy.</b> KV cache at inference grows with context — drives Flash / sparse / linear-attention research.</span></li>
+          <li><span class="mk">!</span><span><b>Data hungry.</b> Few inductive biases means it needs large datasets to generalise well.</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="cap">Every diagram ends with a <b>two-column takeaway</b>: where the architecture <b>shines</b> and where it <b>struggles</b> — so the lesson sticks after the animation.</div>
+</div>
+
+<div class="note">
+  <h3>The flow</h3>
+  <b>Start</b> — opens on the full vertical architecture diagram (all blocks calm/inactive).<br>
+  <b>Stepping</b> — the diagram shrinks into the left dock with the current block glowing; its detailed animation plays in the big right pane.<br>
+  <b>End</b> — diagram reopens full-size with every block marked done, followed by the <b>advantages &amp; challenges</b> takeaway. <span style="color:#64748b;font-family:'JetBrains Mono',monospace;font-size:11px;">(Static mockup — right pane shows the dot-product step as a sample.)</span>
+</div>
+
+<script>
+const BLOCKS=[
+ {kind:'input'},
+ {bt:'Embedding + Positional',bs:'token vectors',cls:'plain'},
+ {kind:'branch'},
+ {bt:'MatMul   Q · Kᵀ',bs:'similarity scores',cls:'amber',step:3},
+ {bt:'Scale   ÷ √dₖ',bs:'stabilise gradients',cls:'purple'},
+ {bt:'Softmax',bs:'→ attention weights',cls:'green'},
+ {bt:'MatMul   · V',bs:'weighted sum of values',cls:'cyan'},
+ {bt:'Multi-Head   Concat · W_O',bs:'h heads in parallel',cls:'orange'},
+ {bt:'Output   context vectors',bs:'',cls:'outp'},
+];
+function conn(host){const c=document.createElement('div');c.className='conn';host.appendChild(c);}
+function buildDiagram(host,{activeIdx=-1,allDone=false}={}){
+  host.innerHTML='';
+  BLOCKS.forEach((b,i)=>{
+    if(i>0)conn(host);
+    if(b.kind==='input'){
+      const wrap=document.createElement('div');wrap.className='tokrow';
+      ['The','bank','by','the','river'].forEach(t=>{const k=document.createElement('div');k.className='tok'+(t==='bank'?' hot':'');k.textContent=t;wrap.appendChild(k);});
+      host.appendChild(wrap);return;
+    }
+    if(b.kind==='branch'){
+      const bw=document.createElement('div');bw.className='branch-wrap';
+      bw.innerHTML='<div class="branch-label">LINEAR PROJECTIONS</div><div class="branch"><div class="qkv q"><div class="h">Q</div><div class="l">query</div></div><div class="qkv k"><div class="h">K</div><div class="l">key</div></div><div class="qkv v"><div class="h">V</div><div class="l">value</div></div></div>';
+      host.appendChild(bw);return;
+    }
+    const d=document.createElement('div');d.className='blk '+(b.cls||'');
+    if(allDone)d.classList.add('green');
+    if(b.step===3&&activeIdx===3)d.classList.add('active');
+    d.innerHTML='<div class="bt">'+b.bt+'</div>'+(b.bs?'<div class="bs">'+b.bs+'</div>':'');
+    if(allDone){const t=document.createElement('div');t.className='done-tick';t.textContent='✅';d.appendChild(t);}
+    host.appendChild(d);
+  });
+}
+buildDiagram(document.getElementById('diagFull'),{allDone:false});
+buildDiagram(document.getElementById('diagDock'),{activeIdx:3});
+
+// sample beams Q -> 5 K nodes
+const viz=document.getElementById('viz');
+const labels=['The','bank','by','the','river'];
+requestAnimationFrame(()=>{
+  const H=viz.clientHeight,W=viz.clientWidth;const tops=[0,0.22,0.44,0.66,0.88].map(f=>10+f*(H-30));
+  const qx=80,qy=H*0.42+17;
+  tops.forEach((t,i)=>{
+    const k=document.createElement('div');k.className='kn';k.style.top=t+'px';k.textContent='K("'+labels[i]+'")';viz.appendChild(k);
+    const kx=W-72,ky=t+11;const dx=kx-qx,dy=ky-qy;const len=Math.hypot(dx,dy);const ang=Math.atan2(dy,dx)*180/Math.PI;
+    const hot=i===4;
+    const b=document.createElement('div');b.className='beam';b.style.left=qx+'px';b.style.top=qy+'px';b.style.width=len+'px';b.style.transform='rotate('+ang+'deg)';
+    b.style.background='linear-gradient(90deg,rgba('+(hot?'34,197,94':'245,158,11')+',.08),'+(hot?'#22c55e':'#f59e0b')+')';b.style.opacity=hot?'1':'.5';viz.appendChild(b);
+    const dot=document.createElement('div');dot.className='dot';dot.style.left=(qx+dx*0.62-3)+'px';dot.style.top=(qy+dy*0.62-3)+'px';
+    dot.style.background=hot?'#22c55e':'#f59e0b';dot.style.boxShadow='0 0 7px '+(hot?'#22c55e':'#f59e0b');viz.appendChild(dot);
+  });
+});
+</script>
+</body>
+</html>
