@@ -80,6 +80,62 @@ async function grid(gx,gy,rows,cols,cell,gap,fn,o={}){
 }
 function clearScene(){gMain.innerHTML='';fx.innerHTML='';}
 
+/* ===== ARCH BLOCK POP ===== */
+function popArchBlock(stepIdx){
+  const block=ARCH.find(b=>b.step===stepIdx);if(!block)return;
+  const node=document.getElementById('ab-'+block.id);if(!node||!node.classList.contains('ab'))return;
+  node.classList.remove('pop');void node.offsetWidth;node.classList.add('pop');
+  node.addEventListener('animationend',()=>node.classList.remove('pop'),{once:true});
+}
+
+/* ===== STEP PROGRESS BAR ===== */
+function buildProgressBar(){
+  const sz=document.getElementById('stageZone');
+  const bar=document.createElement('div');bar.id='engProgress';bar.className='step-progress';
+  for(let i=0;i<TOTAL;i++){
+    const pip=document.createElement('div');pip.className='sp-pip';
+    pip.setAttribute('data-n',i+1);pip.title='Step '+(i+1)+': '+CAPTIONS[i][1];
+    pip.addEventListener('click',()=>jumpTo(i));bar.appendChild(pip);}
+  sz.prepend(bar);
+}
+function updateProgress(i){
+  const bar=document.getElementById('engProgress');if(!bar)return;
+  bar.querySelectorAll('.sp-pip').forEach((pip,idx)=>{
+    pip.classList.toggle('active',idx===i);pip.classList.toggle('done',idx<i);});}
+
+/* ===== INSIGHT STRIP ===== */
+function buildInsightStrip(){
+  const sz=document.getElementById('stageZone');const cap=document.getElementById('caption');
+  const strip=document.createElement('div');strip.id='engInsight';strip.className='insight-strip';
+  sz.insertBefore(strip,cap);
+}
+function updateInsight(i){
+  const strip=document.getElementById('engInsight');if(!strip)return;
+  if(CAPTIONS[i]&&CAPTIONS[i][3]){strip.textContent=CAPTIONS[i][3];strip.classList.add('vis');}
+  else{strip.classList.remove('vis');}}
+
+/* ===== SCRUBBER (optional, called from step fns) ===== */
+function clearScrubber(){const s=document.getElementById('engScrubber');if(s)s.remove();}
+function addScrubber({labels,onScrub,initial=0}){
+  clearScrubber();
+  const sz=document.getElementById('stageZone');const cap=document.getElementById('caption');
+  const wrap=document.createElement('div');wrap.id='engScrubber';wrap.className='eng-scrubber';
+  const hd=document.createElement('div');hd.className='scr-head';hd.textContent='◀ drag / click ▶';wrap.appendChild(hd);
+  const track=document.createElement('div');track.className='scr-track';
+  labels.forEach((lbl,i)=>{
+    const btn=document.createElement('button');btn.className='scr-btn'+(i===initial?' active':'');
+    btn.textContent=lbl;btn.addEventListener('click',()=>{if(busy)return;
+      wrap.querySelectorAll('.scr-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');onScrub(i);});
+    track.appendChild(btn);});
+  wrap.appendChild(track);
+  sz.insertBefore(wrap,cap);return wrap;
+}
+/* Helper called by step fns to sync scrubber highlight without triggering onScrub */
+function setScrubberActive(idx){
+  const wrap=document.getElementById('engScrubber');if(!wrap)return;
+  wrap.querySelectorAll('.scr-btn').forEach((b,j)=>b.classList.toggle('active',j===idx));
+}
+
 /* ============================================================
    ARCHITECTURE MAP
    ============================================================ */
@@ -174,6 +230,7 @@ function setCaption(i){
     if(c[3]){eq.style.display='inline-block';eq.textContent=c[3];}else{eq.style.display='none';}
     cap.classList.remove('swap');
   },170);
+  updateInsight(i);
 }
 function setIndicator(){document.getElementById('indicator').innerHTML=(phase==='start'?'Ready':phase==='end'?'Complete ✓':'Step '+(current+1)+' / '+TOTAL)+'<span class="cursor">_</span>';}
 function syncButtons(){
@@ -187,7 +244,7 @@ function syncButtons(){
 }
 async function runStep(i){
   busy=true;setMode('step');current=i;updateArch(i,false);setCaption(i);setIndicator();syncButtons();
-  clearScene();await wait(200);
+  clearScene();clearScrubber();popArchBlock(i);updateProgress(i);await wait(200);
   const myRun=++runToken;
   await STEPS[i]();
   if(myRun!==runToken)return;        // a newer step started; don't clobber state
@@ -222,8 +279,10 @@ function toggleAuto(){
   if(autoOn)next();
 }
 function resetAll(){
-  autoOn=false;busy=false;current=-1;runToken++;setMode('start');updateArch(-1,false);clearScene();
+  autoOn=false;busy=false;current=-1;runToken++;setMode('start');updateArch(-1,false);clearScene();clearScrubber();
   document.getElementById('capEq').style.display='none';
+  const bar=document.getElementById('engProgress');if(bar)bar.querySelectorAll('.sp-pip').forEach(p=>p.classList.remove('active','done'));
+  const ins=document.getElementById('engInsight');if(ins)ins.classList.remove('vis');
   setIndicator();syncButtons();
 }
 
@@ -245,7 +304,7 @@ function initEngine(){
 
   CAPTIONS=DIAGRAM.captions;STEPS=DIAGRAM.steps;ARCH=DIAGRAM.arch;TOTAL=STEPS.length;
 
-  buildArch();buildTakeaways();
+  buildArch();buildProgressBar();buildInsightStrip();buildTakeaways();
 
   document.getElementById('btnNext').addEventListener('click',next);
   document.getElementById('btnPrev').addEventListener('click',prev);

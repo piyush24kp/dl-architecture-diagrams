@@ -57,14 +57,27 @@ window.DIAGRAM={
    txt(500,420,'trained to answer one question: what noise was added?',{size:12,fill:C.muted});
   },
   async function(){
-   stageTitle('REVERSE PROCESS  ·  predict & subtract, T steps',C.cyan);
-   const xs=[110,310,510,710];const noise=[1.0,0.7,0.4,0.1];
-   for(let s=0;s<4;s++){const g=el('g',{opacity:0});gMain.appendChild(g);
-     for(let r=0;r<7;r++)for(let c=0;c<7;c++){const f=(r-3)*(r-3)+(c-3)*(c-3)<8;const q=noise[s];
-       el('rect',{x:xs[s]+c*24,y:160+r*24,width:22,height:22,fill:f?C.green:C.bg2,'fill-opacity':((f?0.7:0.25)*(1-q)+q*Math.random()).toFixed(2)},g);}
-     txt(xs[s]+84,150,'t='+['T','2T/3','T/3','0'][s],{size:10,fill:C.cyan,parent:g});
-     await appear(g,360);if(s<3)await flow(`M${xs[s]+170},270 L${xs[s+1]},270`,{color:C.cyan,count:2,dur:340});}
-   txt(500,420,'each step removes a little predicted noise — image emerges from chaos',{size:12,fill:C.muted});
+   // Pre-create grid cells; renderLevel() updates them in-place (no flicker)
+   stageTitle('REVERSE PROCESS  ·  scrub through denoising',C.cyan);
+   const n=9,noise_levels=[1.0,0.72,0.45,0.18,0.04];
+   const cells=[];
+   for(let r=0;r<n;r++)for(let c=0;c<n;c++){
+     const f=(r-4)*(r-4)+(c-4)*(c-4)<12;
+     const rect=el('rect',{x:380+c*26,y:120+r*26,width:24,height:24,fill:f?C.green:C.bg2,'fill-opacity':0});
+     cells.push({rect,f,s:r*9+c});}
+   const statusT=txt(500,380,'',{size:12,fill:C.cyan});
+   const pctT=txt(500,406,'',{size:10,fill:C.muted});
+   function renderLevel(idx){
+     const nl=noise_levels[idx];
+     cells.forEach(({rect,f,s})=>{const det=Math.abs(Math.sin(s*1.7+idx*2.3));
+       const a=Math.max(0,Math.min(1,f?(0.72*(1-nl)+nl*det):(0.2*(1-nl)+nl*det*0.8)));
+       rect.setAttribute('fill-opacity',a.toFixed(2));});
+     statusT.textContent=['pure noise — image buried','mostly noise','taking shape','nearly there','clean — generation done'][idx];
+     statusT.setAttribute('fill',[C.red,C.orange,C.a1,C.cyan,C.green][idx]);
+     pctT.textContent=['100%','72%','45%','18%','4%'][idx]+' noise remaining';
+     setScrubberActive(idx);}
+   addScrubber({labels:['t=T  noise','t=¾T','t=½T','t=¼T','t=0  clean'],onScrub:renderLevel,initial:0});
+   for(let i=0;i<5;i++){await tween({dur:360,ease:easeOut,onUpdate:p=>{const nl_f=noise_levels[Math.max(0,i-1)],nl_t=noise_levels[i];const nl=i===0?nl_t:nl_f+(nl_t-nl_f)*p;cells.forEach(({rect,f,s})=>{const det=Math.abs(Math.sin(s*1.7+i*2.3));const a=Math.max(0,Math.min(1,f?(0.72*(1-nl)+nl*det):(0.2*(1-nl)+nl*det*0.8)));rect.setAttribute('fill-opacity',a.toFixed(2));});}});renderLevel(i);await wait(200);}
   },
   async function(){
    stageTitle('THE SAMPLE  ·  a brand-new image',C.green);

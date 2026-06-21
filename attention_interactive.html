@@ -144,17 +144,61 @@ const DIAGRAM={
     const sumtag=chip(700,70,180,44,'Σ weights = 1.00 ✓',C.green,{fs:12,tc:C.green,parent:gMain});await appear(sumtag.g,360);await wait(150);
   },
   async function(){
-    stageTitle('ATTENTION  MATRIX   ·   rows = query · columns = key');
-    const n=5,cell=64,gx=320,gy=110,gap=4;
-    TOKENS.forEach((t,c)=>txt(gx+c*(cell+gap)+cell/2,gy-12,t,{size:9,fill:C.muted}));
-    TOKENS.forEach((t,r)=>txt(gx-14,gy+r*(cell+gap)+cell/2+3,t,{size:9,fill:C.muted,anchor:'end'}));
-    for(let r=0;r<n;r++)for(let c=0;c<n;c++){const v=ATTN[r][c];const x=gx+c*(cell+gap),y=gy+r*(cell+gap);const hi=(r===1&&c===4);
-      el('rect',{x,y,width:cell,height:cell,rx:5,fill:C.bg2,stroke:C.line,'stroke-width':1});
-      const rect=el('rect',{x,y,width:cell,height:cell,rx:5,fill:C.a1,'fill-opacity':0,stroke:hi?C.green:'none','stroke-width':hi?2.5:0});
-      const t=txt(x+cell/2,y+cell/2+4,v.toFixed(2),{size:11,fill:C.dim,opacity:0});
-      tween({dur:280,onUpdate:p=>{rect.setAttribute('fill-opacity',(v*p).toFixed(3));t.setAttribute('opacity',p.toFixed(3));t.setAttribute('fill',v>0.42?'#0a0a0a':C.text);}});await wait(34);}
-    await wait(150);const cap=chip(690,250,250,60,'',C.green,{parent:gMain});
-    txt(125,26,'row "bank" → col "river"',{size:11,fill:C.green,parent:cap.g});txt(125,46,'weight 0.76  ·  disambiguated',{size:10,fill:C.dim,parent:cap.g});await appear(cap.g,420);
+    stageTitle('ATTENTION  MATRIX   ·   click any word to explore its attention',C.a1);
+    const n=5,cell=58,gx=270,gy=106,gap=4;
+    // Column labels
+    TOKENS.forEach((t,c)=>txt(gx+c*(cell+gap)+cell/2,gy-14,t,{size:9,fill:C.muted}));
+    // Draw matrix with stored refs
+    const cellRects=[],cellTxts=[];
+    for(let r=0;r<n;r++)for(let c=0;c<n;c++){
+      const v=ATTN[r][c];const x=gx+c*(cell+gap),y=gy+r*(cell+gap);
+      el('rect',{x,y,width:cell,height:cell,rx:4,fill:C.bg2,stroke:C.line,'stroke-width':1});
+      const rect=el('rect',{x,y,width:cell,height:cell,rx:4,fill:C.a1,'fill-opacity':0});
+      const tval=txt(x+cell/2,y+cell/2+4,v.toFixed(2),{size:10,fill:C.dim,opacity:0});
+      cellRects.push(rect);cellTxts.push(tval);
+      tween({dur:240,onUpdate:p=>{rect.setAttribute('fill-opacity',(v*p).toFixed(3));tval.setAttribute('opacity',p.toFixed(3));}});await wait(26);}
+    // Info panel right of matrix
+    const ipx=620,ipy=96,ipw=250;
+    const ipBg=el('rect',{x:ipx,y:ipy,width:ipw,height:295,rx:9,fill:C.bg2,stroke:C.line,'stroke-width':1,opacity:0});
+    const infoTitle=txt(ipx+ipw/2,ipy+22,'',{size:11,fill:C.a2,weight:700,opacity:0});
+    const infoBars=TOKENS.map((tok,k)=>{
+      const bar=el('rect',{x:ipx+8,y:ipy+38+k*48,width:0,height:28,rx:4,fill:C.a1,opacity:0});
+      const bl=txt(ipx+6,ipy+58+k*48,'"'+tok+'"',{size:9,fill:C.dim,anchor:'start',opacity:0});
+      const bv=txt(ipx+ipw-6,ipy+58+k*48,'',{size:9,fill:C.dim,anchor:'end',opacity:0});
+      return {bar,bl,bv};});
+    let activeRow=-1;const rowBtnData=[];
+    function selectRow(r){
+      if(activeRow===r)return;activeRow=r;
+      const maxIdx=ATTN[r].indexOf(Math.max(...ATTN[r]));
+      for(let ri=0;ri<n;ri++)for(let ci=0;ci<n;ci++){
+        const idx=ri*n+ci,active=ri===r;
+        cellRects[idx].setAttribute('fill',ri===r&&ci===maxIdx?C.green:C.a1);
+        cellRects[idx].setAttribute('opacity',active?1:0.28);
+        cellTxts[idx].setAttribute('opacity',active?'1':'0.14');}
+      rowBtnData.forEach(({bg,lbl},i)=>{
+        bg.setAttribute('fill-opacity',i===r?0.16:0);
+        bg.setAttribute('stroke',i===r?C.a1:C.line);
+        lbl.setAttribute('fill',i===r?C.a1:C.muted);});
+      ipBg.setAttribute('opacity',1);infoTitle.setAttribute('opacity',1);
+      infoTitle.textContent='"'+TOKENS[r]+'" attends to:';
+      infoBars.forEach(({bar,bl,bv},k)=>{
+        const hot=k===maxIdx;
+        bar.setAttribute('opacity',1);bl.setAttribute('opacity',1);bv.setAttribute('opacity',1);
+        tween({dur:300,onUpdate:p=>bar.setAttribute('width',(ATTN[r][k]*(ipw-18)*p).toFixed(1))});
+        bar.setAttribute('fill',hot?C.green:C.a1);
+        bl.setAttribute('fill',hot?C.green:C.dim);
+        bv.textContent=ATTN[r][k].toFixed(2);bv.setAttribute('fill',hot?C.green:C.dim);});}
+    // Clickable row labels
+    TOKENS.forEach((tok,r)=>{
+      const y=gy+r*(cell+gap);
+      const bg=el('rect',{x:140,y,width:122,height:cell,rx:5,fill:C.a1,'fill-opacity':0,stroke:C.line,'stroke-width':1});
+      const lbl=txt(258,y+cell/2+3,'"'+tok+'"',{size:10,fill:C.muted,anchor:'end'});
+      bg.style.cursor='pointer';
+      bg.addEventListener('mouseover',()=>{if(r!==activeRow)bg.setAttribute('fill-opacity',0.06);});
+      bg.addEventListener('mouseout',()=>{if(r!==activeRow)bg.setAttribute('fill-opacity',0);});
+      bg.addEventListener('click',()=>selectRow(r));
+      rowBtnData.push({bg,lbl});});
+    await wait(180);selectRow(1);  // auto-highlight "bank"
   },
   async function(){
     const ys=[50,140,230,320,410];

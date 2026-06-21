@@ -63,14 +63,29 @@ window.DIAGRAM={
    txt(500,440,'the prompt decides which noise to remove — “cat” + “astronaut” emerge',{size:12,fill:C.muted});
   },
   async function(){
-   stageTitle('SAMPLING LOOP  ·  denoise ~20–50 steps',C.blue);
-   const xs=[120,320,520,720];const noise=[1.0,0.65,0.35,0.08];
-   for(let s=0;s<4;s++){const g=el('g',{opacity:0});gMain.appendChild(g);
-     for(let r=0;r<5;r++)for(let c=0;c<5;c++){const f=(r-2)*(r-2)+(c-2)*(c-2)<4;const q=noise[s];
-       el('rect',{x:xs[s]+c*30,y:180+r*30,width:28,height:28,fill:f?C.green:C.purple,'fill-opacity':((f?0.6:0.4)*(1-q)+q*Math.random()).toFixed(2)},g);}
-     txt(xs[s]+75,165,'step '+[1,8,20,40][s],{size:10,fill:C.blue,parent:g});await appear(g,340);
-     if(s<3)await flow(`M${xs[s]+155},255 L${xs[s+1]},255`,{color:C.blue,count:2,dur:320});}
-   txt(500,420,'classifier-free guidance strengthens how closely it follows the prompt',{size:12,fill:C.muted});
+   // Scrubber version — latent grid updates in-place across sampling steps
+   stageTitle('SAMPLING LOOP  ·  scrub through denoising steps',C.blue);
+   const n=5,noise_levels=[1.0,0.7,0.42,0.18,0.06];
+   const cells=[];
+   for(let r=0;r<n;r++)for(let c=0;c<n;c++){
+     const f=(r-2)*(r-2)+(c-2)*(c-2)<4;
+     const rect=el('rect',{x:390+c*36,y:170+r*36,width:32,height:32,rx:5,fill:f?C.green:C.purple,'fill-opacity':0});
+     cells.push({rect,f,s:r*5+c});}
+   const statusT=txt(500,370,'',{size:12,fill:C.blue});
+   const stepT=txt(500,396,'',{size:10,fill:C.muted});
+   function renderSample(idx){
+     const nl=noise_levels[idx];
+     cells.forEach(({rect,f,s})=>{const det=Math.abs(Math.sin(s*1.9+idx*2.1));
+       const a=Math.max(0,Math.min(1,f?(0.7*(1-nl)+nl*det*0.5):(0.45*(1-nl)+nl*det)));
+       rect.setAttribute('fill-opacity',a.toFixed(2));});
+     statusT.textContent=['random latent — no structure','weak shapes emerging','prompt taking hold','mostly coherent','clean latent — ready to decode'][idx];
+     statusT.setAttribute('fill',[C.red,C.orange,C.a1,C.cyan,C.green][idx]);
+     stepT.textContent=['step 1 / 50','step ~10','step ~20','step ~35','step 50  ·  CFG guided'][idx];
+     setScrubberActive(idx);}
+   const labels=['step 1','step 10','step 20','step 35','step 50'];
+   addScrubber({labels,onScrub:renderSample,initial:0});
+   for(let i=0;i<5;i++){await tween({dur:340,ease:easeOut,onUpdate:p=>{const nl_from=noise_levels[Math.max(0,i-1)],nl_to=noise_levels[i];const nl=i===0?nl_to:nl_from+(nl_to-nl_from)*p;cells.forEach(({rect,f,s})=>{const det=Math.abs(Math.sin(s*1.9+i*2.1));const a=Math.max(0,Math.min(1,f?(0.7*(1-nl)+nl*det*0.5):(0.45*(1-nl)+nl*det)));rect.setAttribute('fill-opacity',a.toFixed(2));});}});renderSample(i);await wait(180);}
+   txt(500,440,'classifier-free guidance strengthens prompt adherence across all steps',{size:12,fill:C.muted});
   },
   async function(){
    stageTitle('VAE DECODE  ·  latent → full image',C.green);
