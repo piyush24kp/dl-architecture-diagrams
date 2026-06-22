@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Which ML Model Should I Use? — Decision Guide</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0b0f1a;--bg2:#0e1322;--bg3:#141b2d;--line:#1e293b;
+  --muted:#475569;--text:#e2e8f0;--dim:#94a3b8;
+  --a1:#f59e0b;--a2:#fbbf24;--orange:#f97316;
+  --purple:#a855f7;--cyan:#06b6d4;--green:#22c55e;--blue:#60a5fa;--red:#ef4444;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;
+  background-image:radial-gradient(ellipse 80% 50% at 50% -10%,rgba(245,158,11,.06),transparent 65%);}
+
+/* ── HEADER ── */
+header{display:flex;align-items:center;gap:18px;padding:13px 26px 11px;position:relative;height:66px;flex-shrink:0;}
+.nav-back{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);text-decoration:none;
+  border:1px solid var(--line);border-radius:5px;padding:6px 11px;transition:.2s;white-space:nowrap;}
+.nav-back:hover{color:var(--a1);border-color:rgba(245,158,11,.5);}
+.head-titles{display:flex;flex-direction:column;line-height:1;}
+.htitle{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:3px;
+  background:linear-gradient(100deg,var(--a1),var(--orange));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;}
+.hsub{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);letter-spacing:2px;text-transform:uppercase;margin-top:4px;}
+.hbadge{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--a1);
+  background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.22);padding:7px 13px;border-radius:7px;white-space:nowrap;}
+header::after{content:'';position:absolute;left:26px;right:26px;bottom:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(245,158,11,.4),var(--orange),transparent);opacity:.55;}
+
+/* ── LAYOUT ── */
+.app-wrap{display:grid;grid-template-columns:240px 1fr;min-height:calc(100vh - 66px);}
+
+/* ── PATH SIDEBAR ── */
+.path-panel{border-right:1px solid var(--line);padding:26px 18px 26px;display:flex;flex-direction:column;gap:0;
+  position:sticky;top:0;height:calc(100vh - 66px);overflow-y:auto;}
+.panel-lbl{font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:2px;color:var(--muted);
+  text-transform:uppercase;margin-bottom:18px;}
+.path-steps{flex:1;display:flex;flex-direction:column;}
+.path-step{display:flex;align-items:flex-start;gap:10px;position:relative;}
+.path-step::before{content:'';position:absolute;left:5px;top:14px;bottom:-8px;width:1px;background:var(--line);}
+.path-step:last-child::before{display:none;}
+.pdot{width:11px;height:11px;border-radius:50%;border:1.5px solid var(--a1);background:rgba(245,158,11,.12);flex-shrink:0;margin-top:3px;}
+.pdot.filled{background:var(--a1);}
+.pinfo{display:flex;flex-direction:column;gap:2px;margin-bottom:14px;}
+.peye{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--muted);line-height:1.3;}
+.pans{font-size:11px;color:var(--text);font-weight:500;line-height:1.3;}
+.path-empty{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);opacity:.5;font-style:italic;}
+.restart-btn{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);background:transparent;
+  border:1px solid var(--line);border-radius:5px;padding:7px 12px;cursor:pointer;transition:.2s;margin-top:16px;align-self:flex-start;}
+.restart-btn:hover{color:var(--cyan);border-color:var(--cyan);}
+
+/* ── STAGE ── */
+.stage{padding:36px 44px 60px;display:flex;flex-direction:column;align-items:flex-start;}
+
+/* ── QUESTION ── */
+.q-wrap{width:100%;max-width:900px;opacity:1;animation:slideIn .32s cubic-bezier(.22,.68,0,1.1);}
+.q-wrap.anim-back{animation:slideBack .32s cubic-bezier(.22,.68,0,1.1);}
+@keyframes slideIn{from{transform:translateX(28px);}to{transform:translateX(0);}}
+@keyframes slideBack{from{transform:translateX(-28px);}to{transform:translateX(0);}}
+
+.q-eye{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:2.5px;color:var(--a1);
+  text-transform:uppercase;margin-bottom:10px;}
+.q-text{font-family:'Bebas Neue',sans-serif;font-size:40px;letter-spacing:2px;color:var(--text);
+  line-height:1.05;margin-bottom:6px;}
+.q-hint{font-size:13px;color:var(--dim);margin-bottom:30px;line-height:1.5;}
+
+/* ── OPTION CARDS ── */
+.opts-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:11px;width:100%;}
+.opt{border:1px solid var(--line);border-radius:10px;background:var(--bg2);padding:17px 18px;
+  cursor:pointer;transition:transform .17s,box-shadow .17s,border-color .17s,background .18s;
+  display:flex;flex-direction:column;gap:9px;position:relative;overflow:hidden;user-select:none;}
+.opt:hover{transform:translateY(-2px);}
+.opt:active{transform:scale(.98);}
+.opt-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;
+  font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;border:1px solid;flex-shrink:0;}
+.opt-label{font-size:14px;font-weight:600;color:var(--text);line-height:1.25;}
+.opt-desc{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);line-height:1.5;}
+.opt-arr{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:14px;opacity:0;transition:opacity .15s,right .15s;}
+.opt:hover .opt-arr{opacity:1;right:10px;}
+
+.back-btn{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);background:transparent;
+  border:1px solid var(--line);border-radius:5px;padding:7px 13px;cursor:pointer;transition:.2s;margin-top:22px;}
+.back-btn:hover{color:var(--cyan);border-color:var(--cyan);}
+
+/* ── RESULT ── */
+.result-wrap{width:100%;max-width:960px;opacity:1;animation:riseIn .38s cubic-bezier(.22,.68,0,1.05);}
+@keyframes riseIn{from{transform:translateY(16px);}to{transform:translateY(0);}}
+
+.res-header{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;flex-wrap:wrap;margin-bottom:26px;}
+.res-name-block{flex:1;min-width:260px;}
+.res-eye{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--a1);
+  text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:7px;}
+.res-eye-dot{width:7px;height:7px;border-radius:50%;background:var(--green);display:inline-block;}
+.res-name{font-family:'Bebas Neue',sans-serif;font-size:56px;letter-spacing:3px;line-height:1;margin-bottom:8px;}
+.res-sub{font-size:14px;color:var(--dim);line-height:1.55;max-width:480px;}
+.res-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;}
+.res-tag{font-family:'JetBrains Mono',monospace;font-size:8.5px;padding:3px 8px;border-radius:20px;border:1px solid;text-transform:uppercase;}
+
+.explore-btn{display:inline-flex;align-items:center;gap:9px;font-family:'JetBrains Mono',monospace;
+  font-size:12px;font-weight:700;padding:13px 22px;border-radius:9px;border:none;cursor:pointer;
+  text-decoration:none;transition:filter .18s,transform .18s,box-shadow .18s;white-space:nowrap;flex-shrink:0;margin-top:4px;}
+.explore-btn:hover{filter:brightness(1.15);transform:translateY(-1px);box-shadow:0 6px 24px rgba(0,0,0,.35);}
+
+/* path crumb in result */
+.res-crumb{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:22px;
+  font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);}
+.crumb-item{color:var(--dim);}
+.crumb-sep{color:var(--line);}
+.crumb-final{color:var(--a1);}
+
+.res-body{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}
+.info-card{border-radius:10px;background:var(--bg2);padding:16px 18px;border:1px solid var(--line);}
+.info-card h4{font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:1.5px;text-transform:uppercase;
+  margin-bottom:13px;display:flex;align-items:center;gap:8px;}
+.info-card ul{list-style:none;display:flex;flex-direction:column;gap:9px;}
+.info-card li{font-size:12.5px;color:#cbd5e1;line-height:1.55;display:grid;grid-template-columns:14px 1fr;gap:8px;align-items:start;}
+.info-card li .mk{font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.55;}
+.use-card{border-color:rgba(34,197,94,.25);}
+.use-card h4{color:#4ade80;}
+.use-card li .mk{color:var(--green);}
+.to-card{border-color:rgba(245,158,11,.25);}
+.to-card h4{color:var(--a2);}
+.to-card li .mk{color:var(--a1);}
+
+.specs-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px;}
+.spec-cell{border:1px solid var(--line);border-radius:8px;background:var(--bg2);padding:12px 14px;}
+.spec-lbl{font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:5px;}
+.spec-val{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);line-height:1.4;}
+
+.alts-lbl{font-family:'JetBrains Mono',monospace;font-size:8.5px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
+.alts-row{display:flex;gap:9px;flex-wrap:wrap;}
+.alt-chip{display:flex;align-items:center;gap:9px;border:1px solid var(--line);border-radius:7px;
+  background:var(--bg2);padding:9px 13px;cursor:pointer;transition:.17s;text-decoration:none;min-width:150px;}
+.alt-chip:hover{transform:translateY(-1px);}
+.alt-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.alt-name{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);transition:color .17s;}
+.alt-chip:hover .alt-name{color:var(--text);}
+
+/* ── RESPONSIVE ── */
+@media(max-width:960px){
+  .app-wrap{grid-template-columns:1fr;}
+  .path-panel{display:none;}
+  .stage{padding:22px 18px 50px;}
+  .res-body{grid-template-columns:1fr;}
+  .specs-row{grid-template-columns:repeat(2,1fr);}
+  .q-text{font-size:28px;}
+  .res-name{font-size:40px;}
+  .opts-grid{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <a class="nav-back" href="index.html">← Library</a>
+  <div class="head-titles">
+    <div class="htitle">Model Selector</div>
+    <div class="hsub">Which ML architecture should I use?</div>
+  </div>
+  <div class="hbadge">f(task, data) → architecture</div>
+</header>
+
+<div class="app-wrap">
+  <aside class="path-panel">
+    <div class="panel-lbl">Your Path</div>
+    <div class="path-steps" id="pathSteps"></div>
+    <button class="restart-btn" id="restartBtn">↺ Start Over</button>
+  </aside>
+  <div class="stage" id="stage"></div>
+</div>
+
+<script>
+/* ============================================================
+   MODEL DATA
+   ============================================================ */
+const M = {
+  gpt:{name:'GPT / Transformer',sub:'Decoder-only autoregressive language model',color:'#22c55e',rgb:'34,197,94',
+    page:'gpt_interactive.html',tags:['decoder-only','causal LM','Vaswani 2017'],
+    when:['Text generation: chatbots, writing, code, summarization','Instruction-following and multi-turn dialogue',
+      'Starting point for virtually any language task','Autoregressive tasks where left-to-right context matters'],
+    tradeoffs:['O(n²) attention — context window has a compute cost','Needs massive training corpus (100B+ tokens)',
+      'Slow inference scales poorly for very long sequences'],
+    specs:{'Complexity':'O(n²) training','Data needs':'Very large (100B+ tokens)','Compute':'High — GPU/TPU','Maturity':'★★★★★'},
+    alts:['mamba','moe','rag']},
+
+  bert:{name:'BERT',sub:'Bidirectional encoder — understand context from both sides',color:'#60a5fa',rgb:'96,165,250',
+    page:'bert_interactive.html',tags:['bidirectional','encoder','MLM'],
+    when:['Text classification: sentiment, intent, toxicity','Named entity recognition (NER)',
+      'Extractive question answering over documents','Semantic similarity & sentence embeddings'],
+    tradeoffs:['Cannot generate text — encoder only','Needs a task-specific fine-tuning head',
+      'Hard 512-token limit in original BERT'],
+    specs:{'Complexity':'O(n²) training','Data needs':'Medium (fine-tune on 1K–100K)','Compute':'Low fine-tune cost','Maturity':'★★★★★'},
+    alts:['gpt','rag','transformer']},
+
+  mamba:{name:'Mamba / SSM',sub:'Selective state space model — O(n) linear complexity',color:'#84cc16',rgb:'132,204,22',
+    page:'mamba_interactive.html',tags:['linear O(n)','no attention','SSM'],
+    when:['Very long sequences (100K+ tokens)','Streaming inference with constant memory footprint',
+      'Edge / embedded deployment','Time-series and sequential signal modeling'],
+    tradeoffs:['Smaller ecosystem vs Transformers — newer','Quality gap on short in-context learning tasks',
+      'Less tooling, fewer pretrained models available'],
+    specs:{'Complexity':'O(n) training · O(1) inference','Data needs':'Large (similar to Transformer)','Compute':'Lower inference cost','Maturity':'★★★☆☆'},
+    alts:['gpt','moe','rnn']},
+
+  moe:{name:'Mixture of Experts',sub:'Sparse gating — 100B+ params, fraction of compute',color:'#f97316',rgb:'249,115,22',
+    page:'moe_interactive.html',tags:['sparse','scaling','GPT-4 style'],
+    when:['Need GPT-4 / Mixtral scale capability','Efficient scaling beyond single-device compute',
+      'Routing diverse input types to specialist sub-networks','Production where compute cost per token matters'],
+    tradeoffs:['Complex infrastructure: load balancing, router training','Large total parameter storage even if sparse',
+      'Difficult to train stably — expert collapse risk'],
+    specs:{'Complexity':'O(n²) per expert, sparse activation','Data needs':'Huge — trillion tokens','Compute':'Efficient per token, high total','Maturity':'★★★★☆'},
+    alts:['gpt','mamba','transformer']},
+
+  rag:{name:'RAG',sub:'Retrieval-Augmented Generation — ground LLMs in facts',color:'#ec4899',rgb:'236,72,153',
+    page:'rag_interactive.html',tags:['retrieval','grounded','no retraining'],
+    when:['Factual, verifiable answers with source citations','Domain-specific knowledge without fine-tuning',
+      'Frequently updated or private knowledge bases','Enterprise QA: legal, medical, internal docs'],
+    tradeoffs:['Retrieval latency adds to total response time','Quality ceiling set by retriever quality',
+      'Context window consumed by retrieved chunks'],
+    specs:{'Complexity':'Vector search + LLM inference','Data needs':'Documents — no training','Compute':'LLM + vector DB','Maturity':'★★★★★'},
+    alts:['gpt','agent','bert']},
+
+  agent:{name:'AI Agent',sub:'ReAct loop — think, act, observe, repeat',color:'#22c55e',rgb:'34,197,94',
+    page:'agent_interactive.html',tags:['ReAct','tool use','autonomous'],
+    when:['Multi-step tasks requiring planning + execution','Tool use: web, code, APIs, databases',
+      'Autonomous workflows and pipelines','Research, data analysis, complex problem-solving'],
+    tradeoffs:['Compound failure modes — errors cascade across steps','High latency (many LLM round-trips)',
+      'Expensive and hard to debug / monitor in production'],
+    specs:{'Complexity':'N × LLM calls per task','Data needs':'Depends on base LLM','Compute':'High — multi-turn inference','Maturity':'★★★★☆'},
+    alts:['rag','gpt','moe']},
+
+  sd:{name:'Stable Diffusion',sub:'Latent diffusion — text prompt to photorealistic image',color:'#c084fc',rgb:'192,132,252',
+    page:'stable_diffusion_e2e_interactive.html',tags:['text-to-image','latent diffusion','CFG'],
+    when:['Text-to-image generation at high quality','Image editing, inpainting, and outpainting',
+      'Artistic and creative image synthesis','Style transfer guided by text prompts'],
+    tradeoffs:['50+ denoising steps = slow per-image inference','Requires significant VRAM (6–24 GB)',
+      'Prompt engineering has a learning curve'],
+    specs:{'Complexity':'CLIP + U-Net×50 + VAE','Data needs':'Billions of image-text pairs','Compute':'High — GPU required','Maturity':'★★★★★'},
+    alts:['gan','vae','diffusion']},
+
+  gan:{name:'GAN',sub:'Adversarial training — generator vs discriminator',color:'#ef4444',rgb:'239,68,68',
+    page:'gan_interactive.html',tags:['adversarial','synthesis','minimax'],
+    when:['Fast image synthesis after training converges','Style transfer and domain adaptation',
+      'Data augmentation for limited datasets','High-fidelity generation for narrow domains'],
+    tradeoffs:['Training instability and mode collapse risk','Harder to control than diffusion models',
+      'Largely superseded by diffusion for open-domain quality'],
+    specs:{'Complexity':'Generator + Discriminator','Data needs':'Medium — 10K–1M images','Compute':'Medium train, fast inference','Maturity':'★★★★☆'},
+    alts:['sd','vae','diffusion']},
+
+  vae:{name:'VAE',sub:'Variational autoencoder — learn the latent manifold',color:'#14b8a6',rgb:'20,184,166',
+    page:'vae_interactive.html',tags:['latent space','probabilistic','ELBO'],
+    when:['Anomaly detection — outliers have high reconstruction error','Smooth latent space interpolation',
+      'Compression with learned representations','Codec layer inside Stable Diffusion'],
+    tradeoffs:['Blurry outputs vs GAN and diffusion','KL vs reconstruction loss tension',
+      'Not ideal for open-domain high-quality generation'],
+    specs:{'Complexity':'Encoder + Decoder + KL loss','Data needs':'Medium — 10K+','Compute':'Low–Medium','Maturity':'★★★★★'},
+    alts:['gan','sd','diffusion']},
+
+  vit:{name:'ViT',sub:'Vision Transformer — image patches as tokens, global attention',color:'#3b82f6',rgb:'59,130,246',
+    page:'vit_interactive.html',tags:['patches','global attention','Dosovitskiy 2021'],
+    when:['Large-scale image classification (ImageNet+ scale)','Transfer learning foundation for vision tasks',
+      'Multi-modal models requiring image features','When global context in images matters'],
+    tradeoffs:['Needs very large data to outperform CNNs','No inductive spatial bias — must learn locality',
+      'Higher compute than ResNet on small datasets'],
+    specs:{'Complexity':'O(n²) on patches','Data needs':'Very large — ImageNet+','Compute':'High','Maturity':'★★★★★'},
+    alts:['resnet','clip','cnn']},
+
+  resnet:{name:'ResNet / CNN',sub:'Residual skip connections — deep networks that actually work',color:'#f97316',rgb:'249,115,22',
+    page:'resnet_interactive.html',tags:['skip connections','He 2015','classification'],
+    when:['Image classification on standard datasets','Object detection backbone (YOLO, Faster-RCNN)',
+      'Limited data — CNNs generalise better than ViT when small','Production with tight latency budget'],
+    tradeoffs:['Local receptive field limits global reasoning','Architecture engineering per task',
+      'ViT overtakes with sufficient scale and data'],
+    specs:{'Complexity':'O(n) per layer (local)','Data needs':'Small–Large — 10K–10M','Compute':'Low–Medium','Maturity':'★★★★★'},
+    alts:['vit','unet','cnn']},
+
+  unet:{name:'U-Net',sub:'Encoder-decoder + skip connections — pixel-perfect spatial outputs',color:'#14b8a6',rgb:'20,184,166',
+    page:'unet_interactive.html',tags:['segmentation','skip fusion','Ronneberger 2015'],
+    when:['Semantic segmentation — pixel-level class labels','Medical image analysis (CT, MRI, microscopy)',
+      'Denoising backbone inside Stable Diffusion','Tasks where output resolution = input resolution'],
+    tradeoffs:['Memory intensive — skip tensors stay in memory','Fixed input resolution','Not suited for classification'],
+    specs:{'Complexity':'O(n) with stored skips','Data needs':'Small–Medium (hundreds OK)','Compute':'Medium','Maturity':'★★★★★'},
+    alts:['resnet','vit','diffusion']},
+
+  clip:{name:'CLIP',sub:'Contrastive Language-Image Pretraining — bridge vision + language',color:'#06b6d4',rgb:'6,182,212',
+    page:'clip_interactive.html',tags:['contrastive','zero-shot','multi-modal'],
+    when:['Zero-shot image classification without fine-tuning','Image search with natural language queries',
+      'Semantic image-text alignment and ranking','Text conditioning inside Stable Diffusion pipeline'],
+    tradeoffs:['No generation capability — encoder only','Needs billions of image-text pairs for pretraining',
+      'Struggles with fine-grained attribute reasoning'],
+    specs:{'Complexity':'Dual encoder (image + text)','Data needs':'Billions of pairs','Compute':'High pretrain, fast inference','Maturity':'★★★★★'},
+    alts:['vit','sd','bert']},
+
+  lora:{name:'LoRA',sub:'Low-rank adaptation — fine-tune with 0.1% of the parameters',color:'#eab308',rgb:'234,179,8',
+    page:'lora_interactive.html',tags:['adapters','PEFT','Hu 2022'],
+    when:['Fine-tune a large LLM on consumer hardware (1 GPU)','Quick domain adaptation — style, tone, task',
+      'Multiple adapters for different tasks on one base model','When you cannot afford full fine-tuning cost'],
+    tradeoffs:['Limited expressive capacity vs full fine-tuning','Requires choosing rank r (hyperparameter)',
+      'May not capture large behavioural shifts'],
+    specs:{'Complexity':'ΔW = B·A, rank r ≪ d','Data needs':'Small–Medium — 1K–100K','Compute':'Low — single GPU','Maturity':'★★★★★'},
+    alts:['rlhf','finetuning','gpt']},
+
+  rlhf:{name:'RLHF',sub:'Reinforcement Learning from Human Feedback — alignment',color:'#a855f7',rgb:'168,85,247',
+    page:'rlhf_interactive.html',tags:['alignment','PPO / DPO','ChatGPT / Claude'],
+    when:['Align model outputs to human values and preferences','Reduce harmful, toxic, or misleading outputs',
+      'Improve helpfulness and instruction-following quality','Deploying a production chatbot or assistant'],
+    tradeoffs:['Expensive human preference labeling pipeline','Reward hacking and over-optimisation risk',
+      'Complex 3-stage pipeline: SFT → RM → PPO'],
+    specs:{'Complexity':'SFT + Reward model + PPO','Data needs':'Large SFT + preference pairs','Compute':'High — 3 model runs','Maturity':'★★★★★'},
+    alts:['lora','finetuning','gpt']},
+
+  finetuning:{name:'Fine-Tuning Landscape',sub:'Full FT vs LoRA vs QLoRA vs RLHF — the complete map',color:'#a855f7',rgb:'168,85,247',
+    page:'finetuning_landscape_interactive.html',tags:['QLoRA','full FT','DPO','decision guide'],
+    when:['Unsure which fine-tuning method fits your budget','Need to compare cost vs quality trade-offs',
+      'Planning a production fine-tuning pipeline','Evaluating PEFT vs full fine-tuning'],
+    tradeoffs:['Full FT: best results, highest compute','QLoRA: lowest hardware bar, small quality gap',
+      'DPO: simpler than RLHF, competitive results'],
+    specs:{'Complexity':'Varies by method','Data needs':'1K–1M+ (varies)','Compute':'1 GPU to cluster','Maturity':'★★★★★'},
+    alts:['lora','rlhf','gpt']},
+
+  rnn:{name:'RNN / LSTM / GRU',sub:'Recurrent networks — the sequential foundation',color:'#06b6d4',rgb:'6,182,212',
+    page:'rnn_interactive.html',tags:['sequential','gated cells','Hochreiter 1997'],
+    when:['Legacy systems or severely constrained hardware','Teaching sequential modelling fundamentals',
+      'Very simple sequences where a Transformer is overkill','Understanding the history before Transformers'],
+    tradeoffs:['Cannot parallelise training — sequential by design','Vanishing gradients on long sequences (LSTM helps)',
+      'Superseded by Transformers and Mamba for most tasks'],
+    specs:{'Complexity':'O(n) sequential','Data needs':'Small–Medium','Compute':'Low','Maturity':'★★★★★'},
+    alts:['mamba','gpt','lstm']},
+
+  diffusion:{name:'Diffusion Model',sub:'DDPM — forward noise process + learned denoising',color:'#a78bfa',rgb:'167,139,250',
+    page:'diffusion_interactive.html',tags:['DDPM','denoising','score matching'],
+    when:['Understanding the maths behind generative image models','Audio and video generation research',
+      'Molecule and protein structure generation','Backbone for high-quality scientific synthesis'],
+    tradeoffs:['Many denoising steps = slow sampling (use DDIM to speed up)','High compute for training',
+      'Requires careful noise schedule design'],
+    specs:{'Complexity':'T steps × U-Net cost','Data needs':'Large','Compute':'High','Maturity':'★★★★★'},
+    alts:['sd','gan','vae']},
+};
+
+/* ============================================================
+   DECISION TREE
+   ============================================================ */
+const ROOT = {
+  id:'root', eye:'START HERE',
+  q:'What is your primary goal?',
+  hint:'Pick the task that best describes what you want to build or solve.',
+  opts:[
+    {label:'Generate text',         desc:'Chatbot, writing, code, summarization',        icon:'T→', color:'#a855f7', rgb:'168,85,247', next:'text_gen'},
+    {label:'Understand / classify text', desc:'Sentiment, NER, QA, embeddings',         icon:'◈',  color:'#60a5fa', rgb:'96,165,250',  result:'bert'},
+    {label:'Generate images',       desc:'Text-to-image, style transfer, art',           icon:'⬡',  color:'#c084fc', rgb:'192,132,252', next:'img_gen'},
+    {label:'Analyze / classify images', desc:'Classification, detection, segmentation',  icon:'◻',  color:'#3b82f6', rgb:'59,130,246',  next:'img_cls'},
+    {label:'Answer questions with facts', desc:'Grounded answers, documents, citations', icon:'?→', color:'#ec4899', rgb:'236,72,153',  result:'rag'},
+    {label:'Build an autonomous agent', desc:'Planning, tool use, multi-step tasks',     icon:'⚙',  color:'#22c55e', rgb:'34,197,94',   result:'agent'},
+    {label:'Align image ↔ text',    desc:'Zero-shot classify, semantic image search',    icon:'⇌',  color:'#06b6d4', rgb:'6,182,212',   next:'multimodal'},
+    {label:'Fine-tune an existing model', desc:'Adapt, align, specialize a base LLM',   icon:'⚡',  color:'#eab308', rgb:'234,179,8',   next:'finetune'},
+  ]
+};
+
+const BRANCHES = {
+  text_gen:{
+    id:'text_gen', eye:'TEXT GENERATION', q:'What is your text generation scenario?',
+    hint:'Choose the characteristic that most defines your use case.',
+    opts:[
+      {label:'Standard LLM / chatbot',     desc:'Up to 32K context, general purpose generation',  icon:'◈',  color:'#22c55e', rgb:'34,197,94',   result:'gpt'},
+      {label:'Very long sequences',         desc:'100K+ tokens, streaming, edge deployment',        icon:'→→', color:'#84cc16', rgb:'132,204,22',  result:'mamba'},
+      {label:'Massive scale (100B+ params)', desc:'Efficient sparse experts — GPT-4 / Mixtral',   icon:'⋮',  color:'#f97316', rgb:'249,115,22',  result:'moe'},
+      {label:'Sequential / time-series',   desc:'Audio, sensor signals, simple sequences',          icon:'∿',  color:'#06b6d4', rgb:'6,182,212',   next:'sequential'},
+    ]
+  },
+  img_gen:{
+    id:'img_gen', eye:'IMAGE GENERATION', q:'How do you want to generate images?',
+    hint:'Different generators optimise for different quality / speed / control trade-offs.',
+    opts:[
+      {label:'From text prompts',           desc:'High quality, controllable with text guidance',   icon:'✦',  color:'#c084fc', rgb:'192,132,252', result:'sd'},
+      {label:'Adversarial / domain-specific', desc:'Style transfer, data augmentation, fast inference', icon:'⇌', color:'#ef4444', rgb:'239,68,68', result:'gan'},
+      {label:'Latent space exploration',    desc:'Anomaly detection, interpolation, compression',   icon:'○',  color:'#14b8a6', rgb:'20,184,166',  result:'vae'},
+      {label:'Pure denoising math (DDPM)', desc:'Research, audio gen, understand the mechanics',    icon:'∿',  color:'#a78bfa', rgb:'167,139,250', result:'diffusion'},
+    ]
+  },
+  img_cls:{
+    id:'img_cls', eye:'COMPUTER VISION', q:'What is your image task?',
+    hint:'Scale of data and output type are the key differentiators here.',
+    opts:[
+      {label:'Classify — large dataset',    desc:'ImageNet scale, global spatial context',          icon:'◻',  color:'#3b82f6', rgb:'59,130,246',  result:'vit'},
+      {label:'Classify — standard dataset', desc:'Proven, efficient, works with less data',         icon:'◻',  color:'#f97316', rgb:'249,115,22',  result:'resnet'},
+      {label:'Pixel-level segmentation',    desc:'Medical imaging, semantic masks, denoising',      icon:'⬡',  color:'#14b8a6', rgb:'20,184,166',  result:'unet'},
+    ]
+  },
+  multimodal:{
+    id:'multimodal', eye:'MULTI-MODAL', q:'What is your cross-modal goal?',
+    hint:'CLIP aligns; Stable Diffusion generates.',
+    opts:[
+      {label:'Align text ↔ image spaces',  desc:'Zero-shot classification, image search, ranking', icon:'⇌',  color:'#06b6d4', rgb:'6,182,212',   result:'clip'},
+      {label:'Generate images from text',  desc:'Full text-to-image pipeline via diffusion',        icon:'✦',  color:'#c084fc', rgb:'192,132,252', result:'sd'},
+    ]
+  },
+  finetune:{
+    id:'finetune', eye:'FINE-TUNING', q:'What is your fine-tuning goal?',
+    hint:'Your compute budget and alignment goal point to very different methods.',
+    opts:[
+      {label:'Efficient adaptation (low GPU)', desc:'Single GPU, 0.1% of params, consumer hardware', icon:'⚡', color:'#eab308', rgb:'234,179,8', result:'lora'},
+      {label:'Align to human preferences', desc:'Helpfulness, safety, instruction-following',        icon:'♦',  color:'#a855f7', rgb:'168,85,247', result:'rlhf'},
+      {label:'Compare all methods',         desc:'Full FT vs LoRA vs QLoRA vs DPO — full map',      icon:'≡',  color:'#a855f7', rgb:'168,85,247', result:'finetuning'},
+    ]
+  },
+  sequential:{
+    id:'sequential', eye:'SEQUENCE MODELING', q:'Which sequential constraints apply to you?',
+    hint:'Mamba is the modern choice; RNN/LSTM for legacy or educational contexts.',
+    opts:[
+      {label:'Modern, long context, efficient', desc:'State space model, O(n), constant memory',    icon:'→',  color:'#84cc16', rgb:'132,204,22', result:'mamba'},
+      {label:'Legacy / embedded / educational', desc:'Classic RNN/LSTM, minimal dependencies',      icon:'∿',  color:'#06b6d4', rgb:'6,182,212',  result:'rnn'},
+    ]
+  },
+};
+
+/* ============================================================
+   STATE
+   ============================================================ */
+const state = {history:[], currentId:'root', result:null};
+
+function getNode(id){ return id==='root' ? ROOT : BRANCHES[id]; }
+
+/* ============================================================
+   RENDER PATH SIDEBAR
+   ============================================================ */
+function renderPath(){
+  const el = document.getElementById('pathSteps');
+  if(!state.history.length && !state.result){
+    el.innerHTML='<div class="path-empty">Start by picking a goal →</div>';
+    return;
+  }
+  el.innerHTML = state.history.map((h,i)=>`
+    <div class="path-step">
+      <div class="pdot ${i===state.history.length-1 && state.result?'filled':''}"></div>
+      <div class="pinfo">
+        <div class="peye">${h.eye}</div>
+        <div class="pans">${h.label}</div>
+      </div>
+    </div>
+  `).join('') + (state.result ? `
+    <div class="path-step">
+      <div class="pdot filled"></div>
+      <div class="pinfo">
+        <div class="peye">RECOMMENDATION</div>
+        <div class="pans" style="color:${M[state.result].color}">${M[state.result].name}</div>
+      </div>
+    </div>` : '');
+}
+
+/* ============================================================
+   RENDER QUESTION
+   ============================================================ */
+function renderQuestion(nodeId, anim){
+  const node = getNode(nodeId);
+  const stage = document.getElementById('stage');
+  stage.innerHTML='';
+  const wrap = document.createElement('div');
+  wrap.className='q-wrap'+(anim==='back'?' anim-back':'');
+  wrap.innerHTML=`
+    <div class="q-eye">${node.eye}</div>
+    <div class="q-text">${node.q}</div>
+    <div class="q-hint">${node.hint||''}</div>
+    <div class="opts-grid" id="optsGrid"></div>
+    ${state.history.length?`<button class="back-btn" id="backBtn">‹ Back</button>`:''}
+  `;
+  stage.appendChild(wrap);
+
+  const grid = document.getElementById('optsGrid');
+  node.opts.forEach(opt=>{
+    const card = document.createElement('div');
+    card.className='opt';
+    card.style.borderColor=`rgba(${opt.rgb},.18)`;
+    card.innerHTML=`
+      <div class="opt-icon" style="background:rgba(${opt.rgb},.1);border-color:rgba(${opt.rgb},.4);color:${opt.color};">${opt.icon}</div>
+      <div class="opt-label">${opt.label}</div>
+      <div class="opt-desc">${opt.desc}</div>
+      <div class="opt-arr" style="color:${opt.color}">→</div>
+    `;
+    card.addEventListener('mouseenter',()=>{
+      card.style.borderColor=`rgba(${opt.rgb},.55)`;
+      card.style.boxShadow=`0 0 22px rgba(${opt.rgb},.13)`;
+      card.style.background=`rgba(${opt.rgb},.04)`;
+    });
+    card.addEventListener('mouseleave',()=>{
+      card.style.borderColor=`rgba(${opt.rgb},.18)`;
+      card.style.boxShadow='';
+      card.style.background='';
+    });
+    card.addEventListener('click',()=>handlePick(node, opt));
+    grid.appendChild(card);
+  });
+
+  const bb = document.getElementById('backBtn');
+  if(bb) bb.addEventListener('click', handleBack);
+}
+
+/* ============================================================
+   RENDER RESULT
+   ============================================================ */
+function renderResult(modelId){
+  const m = M[modelId];
+  const stage = document.getElementById('stage');
+
+  const crumb = state.history.map(h=>`<span class="crumb-item">${h.label}</span>`).join('<span class="crumb-sep"> › </span>')
+    + `<span class="crumb-sep"> › </span><span class="crumb-final">${m.name}</span>`;
+
+  const altsHtml = m.alts.filter(id=>M[id]).map(id=>{
+    const a=M[id];
+    return `<a class="alt-chip" href="${a.page||'#'}" style="border-color:rgba(${a.rgb},.2);">
+      <div class="alt-dot" style="background:${a.color}"></div>
+      <div class="alt-name">${a.name}</div>
+    </a>`;
+  }).join('');
+
+  const specsHtml = Object.entries(m.specs).map(([k,v])=>`
+    <div class="spec-cell" style="border-color:rgba(${m.rgb},.15);">
+      <div class="spec-lbl">${k}</div>
+      <div class="spec-val" style="color:rgba(${m.rgb},.85)">${v}</div>
+    </div>
+  `).join('');
+
+  stage.innerHTML='';
+  const wrap = document.createElement('div');
+  wrap.className='result-wrap';
+  wrap.innerHTML=`
+    <div class="res-crumb">${crumb}</div>
+    <div class="res-header">
+      <div class="res-name-block">
+        <div class="res-eye"><span class="res-eye-dot"></span> Recommended Architecture</div>
+        <div class="res-name" style="color:${m.color}">${m.name}</div>
+        <div class="res-sub">${m.sub}</div>
+        <div class="res-tags">
+          ${m.tags.map(t=>`<span class="res-tag" style="border-color:rgba(${m.rgb},.3);color:${m.color}">${t}</span>`).join('')}
+        </div>
+      </div>
+      ${m.page?`<a class="explore-btn" href="${m.page}" style="background:${m.color};color:#07100e;">
+        Explore Architecture →
+      </a>`:''}
+    </div>
+
+    <div class="res-body">
+      <div class="info-card use-card">
+        <h4><span>✓</span> When to use this</h4>
+        <ul>${m.when.map(w=>`<li><span class="mk">✓</span><span>${w}</span></li>`).join('')}</ul>
+      </div>
+      <div class="info-card to-card">
+        <h4><span>△</span> Key trade-offs</h4>
+        <ul>${m.tradeoffs.map(t=>`<li><span class="mk">△</span><span>${t}</span></li>`).join('')}</ul>
+      </div>
+    </div>
+
+    <div class="specs-row">${specsHtml}</div>
+
+    <div class="alts-lbl">See also — similar models to consider</div>
+    <div class="alts-row">${altsHtml}</div>
+
+    <button class="back-btn" id="backBtn" style="margin-top:28px">‹ Try a different path</button>
+  `;
+  stage.appendChild(wrap);
+  document.getElementById('backBtn').addEventListener('click', handleBack);
+}
+
+/* ============================================================
+   HANDLERS
+   ============================================================ */
+function handlePick(node, opt){
+  state.history.push({nodeId: node.id, label: opt.label, eye: node.eye});
+  if(opt.result){
+    state.result = opt.result;
+    renderPath();
+    renderResult(opt.result);
+  } else if(opt.next){
+    state.currentId = opt.next;
+    state.result = null;
+    renderPath();
+    renderQuestion(opt.next, 'forward');
+  }
+}
+
+function handleBack(){
+  if(!state.history.length) return;
+  const popped = state.history.pop();
+  state.result = null;
+  state.currentId = popped.nodeId;
+  renderPath();
+  renderQuestion(popped.nodeId, 'back');
+}
+
+document.getElementById('restartBtn').addEventListener('click', ()=>{
+  state.history=[];
+  state.currentId='root';
+  state.result=null;
+  renderPath();
+  renderQuestion('root','back');
+});
+
+/* ============================================================
+   INIT
+   ============================================================ */
+renderPath();
+renderQuestion('root', 'forward');
+</script>
+</body>
+</html>
